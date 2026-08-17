@@ -1,0 +1,6 @@
+{
+  "appHost": {
+    "path": "src/AppHost/AppHost.csproj"
+  },
+  "channel": "stable"
+}

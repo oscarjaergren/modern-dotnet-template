@@ -1,0 +1,55 @@
+<Project>
+
+  <!--
+    Shared build configuration for every project in the repo.
+    The gates here are deliberately strict: an agent (or a human) should learn from a failed
+    build that the work is not done, rather than from a review comment three days later.
+    See docs/build-gates.md for the rationale and the documented escape hatches.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Gates">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!--
+      TreatWarningsAsErrors only covers the *compiler*. Warnings raised by MSBuild targets — SDK
+      and package targets like Aspire's ASPIRE010 — pass straight through it. If the repo claims
+      warnings are errors, it should mean all of them.
+    -->
+    <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Reproducibility">
+    <Deterministic>true</Deterministic>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- Set by CI so builds there are fully deterministic; harmless locally. -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Output layout">
+    <!--
+      Artifacts output layout: every project's build output goes to artifacts/ at the repo root
+      instead of a bin/ and obj/ beside each csproj. One directory to gitignore, one to clean,
+      and no build output interleaved with source.
+
+      ArtifactsPath is set explicitly because the default is resolved relative to the nearest
+      Directory.Build.props, and tests/ has one of its own.
+    -->
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Packaging">
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

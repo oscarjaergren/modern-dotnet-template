@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege by default. Jobs that need more request it explicitly.
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the in-flight run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build-and-test:
+    name: Build, test, format, contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Restore
+        run: dotnet restore
+
+      # Warnings are errors, and NuGet audit findings fail the build. See docs/build-gates.md.
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # Unit, architecture, and Aspire integration tests. No container runtime is required:
+      # the AppHost has only a project resource. Adding a database changes that —
+      # see docs/adding-a-database.md.
+      - name: Test
+        run: dotnet test --no-build --configuration Release
+
+      - name: Verify formatting
+        run: dotnet format --verify-no-changes
+
+      # The committed OpenAPI document is the API contract. A build regenerates it; if that
+      # produces a different file, the contract changed without being reviewed.
+      - name: Verify OpenAPI contract is current
+        run: |
+          if ! git diff --exit-code -- src/Api/openapi.json; then
+            echo "::error file=src/Api/openapi.json::openapi.json is out of date. Run 'dotnet build' and commit the result."
+            exit 1
+          fi
+
+  aot-container:
+    name: Native AOT and container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      # Native AOT shells out to clang and the system linker on Linux.
+      - name: Install Native AOT prerequisites
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev
+
+      # This is the gate that keeps the AOT claim true as the template evolves: any trim or
+      # AOT warning is an error via Directory.Build.props. See docs/native-aot.md.
+      - name: Publish container image
+        run: dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer
+
+      # Publishing successfully proves nothing — AOT failures surface at runtime. Actually run it.
+      - name: Verify the image serves traffic
+        run: |
+          set -euo pipefail
+          cid=$(docker run -d -p 8080:8080 modern-dotnet-template-api:latest)
+          trap 'docker logs "$cid" || true; docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+
+          curl -fsS --retry 30 --retry-all-errors --retry-delay 1 --retry-connrefused \
+            http://127.0.0.1:8080/ping | tee /dev/stderr | grep -q '"status":"pong"'
+
+          curl -fsS -X POST http://127.0.0.1:8080/greetings \
+            -H 'Content-Type: application/json' -d '{"name":"Ada","age":36}' \
+            | tee /dev/stderr | grep -q 'Hello, Ada'
+
+          # Validation must reject bad input. This asserts the .NET 10 validation source generator
+          # is actually wired up — it fails silently with a 200 when it is not. See AGENTS.md.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/greetings \
+            -H 'Content-Type: application/json' -d '{"name":"","age":500}')
+          if [ "$code" != "400" ]; then
+            echo "::error::Expected 400 from validation, got $code — validation is not running."
+            exit 1
+          fi
+
+          # An expected failure returned as a value, not thrown. Also proves ProblemDetails
+          # serializes under Native AOT, which needs an ApiJsonSerializerContext entry and would
+          # otherwise fail at runtime rather than at build. See docs/errors-and-failures.md.
+          conflict=$(curl -s -o /tmp/conflict.json -w '%{http_code}' -X POST http://127.0.0.1:8080/greetings \
+            -H 'Content-Type: application/json' -d '{"name":"admin"}')
+          if [ "$conflict" != "409" ]; then
+            echo "::error::Expected 409 for a reserved name, got $conflict."
+            exit 1
+          fi
+          grep -q '"traceId"' /tmp/conflict.json || {
+            echo "::error::ProblemDetails response is missing traceId — log correlation is broken."
+            exit 1
+          }
+
+          echo "Image size (as distributed):"
+          docker save modern-dotnet-template-api:latest | wc -c | awk '{printf "  %.1f MB\n", $1/1048576}'
+
+      # Symbols are deliberately excluded from the image; keep them for post-mortem symbolication.
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-debug-symbols
+          path: artifacts/bin/Api/release_linux-x64/native/Api.dbg
+          if-no-files-found: error
+          retention-days: 14

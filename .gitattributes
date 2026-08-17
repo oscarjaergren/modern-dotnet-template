@@ -1,0 +1,20 @@
+# Normalise line endings so `dotnet format --verify-no-changes` behaves identically
+# on a Windows clone and a Linux CI runner. Without this, CI fails on checkout.
+* text=auto eol=lf
+
+*.sln       text eol=crlf
+*.slnx      text eol=lf
+*.csproj    text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+*.cs        text eol=lf diff=csharp
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf
+*.sh        text eol=lf
+
+*.png       binary
+*.jpg       binary
+*.ico       binary
+*.dll       binary

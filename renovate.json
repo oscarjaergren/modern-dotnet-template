@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Europe/Stockholm",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 5,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Aspire ships its packages as a matched set; a partial bump does not build.",
+      "matchPackageNames": ["Aspire.**"],
+      "groupName": "Aspire"
+    },
+    {
+      "description": "OpenTelemetry packages version in lockstep across instrumentation and exporters.",
+      "matchPackageNames": ["OpenTelemetry.**"],
+      "groupName": "OpenTelemetry"
+    },
+    {
+      "description": "Keep the ASP.NET Core OpenAPI stack aligned with the pinned Microsoft.OpenApi.",
+      "matchPackageNames": [
+        "Microsoft.AspNetCore.OpenApi",
+        "Microsoft.Extensions.ApiDescription.Server",
+        "Microsoft.OpenApi"
+      ],
+      "groupName": "OpenAPI"
+    },
+    {
+      "description": "Test tooling moves together.",
+      "matchPackageNames": ["xunit**", "TngTech.ArchUnitNET**"],
+      "groupName": "test tooling"
+    },
+    {
+      "description": "Actions are pinned by digest; group the digest bumps into one PR.",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "Never auto-bump the SDK across a major — that is a deliberate migration.",
+      "matchManagers": ["dotnet-sdk"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "schedule": ["at any time"],
+    "prPriority": 10
+  },
+  "lockFileMaintenance": {
+    "enabled": false
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "modern-dotnet-template",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  "features": {
+    // Version comes from global.json so the container and CI agree.
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0"
+    },
+    // Needed for the container publish gate: `dotnet publish /t:PublishContainer`
+    // loads the image into a local daemon. Not needed for `aspire run` today, but adding a
+    // database resource makes it required — see docs/adding-a-database.md.
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // Native AOT shells out to clang and the system linker. Without these, `dotnet publish`
+  // fails at the "Generating native code" step with a confusing linker error.
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev && dotnet tool restore && dotnet restore",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "ms-azuretools.vscode-docker",
+        "humao.rest-client",
+        "editorconfig.editorconfig"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "ModernDotnetTemplate.slnx",
+        "editor.formatOnSave": true
+      }
+    }
+  },
+
+  "forwardPorts": [5180, 8080],
+  "portsAttributes": {
+    "5180": { "label": "API (local)" },
+    "8080": { "label": "API (container)" }
+  },
+
+  "remoteEnv": {
+    "DOTNET_NOLOGO": "true",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "true"
+  }
+}

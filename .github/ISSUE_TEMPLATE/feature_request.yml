@@ -1,0 +1,40 @@
+name: Change proposal
+description: Propose a change to the template's conventions, gates, or defaults
+labels: [proposal]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before proposing an addition, please read the README's "deliberately does not include"
+        section and `docs/adding-a-dependency.md`. Most exclusions are intentional, and the
+        more interesting conversation is usually about why an existing decision is wrong.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should change
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What problem this solves for people generating projects from the template.
+    validations:
+      required: true
+
+  - type: input
+    id: adr
+    attributes:
+      label: Related doc
+      description: If this contradicts something already documented, which page?
+      placeholder: docs/adding-a-dependency.md
+
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost
+      description: |
+        What does every consumer inherit — a dependency, a licence, build time, binary size,
+        a constraint? Anything added here propagates to every generated project.

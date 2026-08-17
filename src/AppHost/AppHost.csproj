@@ -1,0 +1,19 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.5.0">
+
+  <!--
+    Aspire orchestration. This project is a development-time concern: it is never deployed,
+    and it is deliberately NOT Native AOT. See docs/native-aot.md.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Aspire 13.5 templates opt in by default; without it the SDK warns ASPIRE010. -->
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <UserSecretsId>b3f1c6a2-4d8e-4a71-9c53-2e7f8a0d61b4</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Api\Api.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,103 @@
+# EditorConfig — https://editorconfig.org
+# Drives both `dotnet format` and EnforceCodeStyleInBuild. Because TreatWarningsAsErrors is on,
+# any rule set to `warning` below is a build failure. That is intentional for the small curated
+# set here; everything else stays at `suggestion` so the template does not fight its consumers.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csx}]
+indent_size = 4
+
+[*.{csproj,props,targets,xml}]
+indent_size = 2
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# --- using directives ---
+csharp_using_directive_placement = outside_namespace:warning
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# --- modern C# the template relies on ---
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:warning
+csharp_style_prefer_primary_constructors = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+
+# --- nullability and correctness ---
+dotnet_diagnostic.CS8600.severity = error
+dotnet_diagnostic.CS8602.severity = error
+dotnet_diagnostic.CS8603.severity = error
+dotnet_diagnostic.CS8618.severity = error
+
+# --- trimming / Native AOT: these must never regress on the API ---
+# IL2026 RequiresUnreferencedCode, IL3050 RequiresDynamicCode, IL2091 generic mismatch.
+dotnet_diagnostic.IL2026.severity = error
+dotnet_diagnostic.IL2091.severity = error
+dotnet_diagnostic.IL3050.severity = error
+
+# --- naming ---
+# Order matters: the first matching rule wins. const and static readonly fields are
+# PascalCase by convention, so they must be matched before the private-instance-field rule.
+dotnet_naming_rule.const_fields_pascal.symbols = const_fields
+dotnet_naming_rule.const_fields_pascal.style = pascal_case
+dotnet_naming_rule.const_fields_pascal.severity = warning
+dotnet_naming_symbols.const_fields.applicable_kinds = field
+dotnet_naming_symbols.const_fields.applicable_accessibilities = *
+dotnet_naming_symbols.const_fields.required_modifiers = const
+
+dotnet_naming_rule.static_readonly_pascal.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_pascal.style = pascal_case
+dotnet_naming_rule.static_readonly_pascal.severity = warning
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities = *
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static,readonly
+
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_prefix
+dotnet_naming_rule.private_fields_underscore.severity = warning
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_style.underscore_prefix.capitalization = camel_case
+dotnet_naming_style.underscore_prefix.required_prefix = _
+
+# --- exceptions are for bugs, not control flow (docs/errors-and-failures.md) ---
+# A bare catch(Exception) that swallows and continues is how the discipline erodes in practice.
+dotnet_diagnostic.CA1031.severity = error
+
+# --- suppressions ---
+# A suppression here must name a reason that is architectural or a genuine tool conflict.
+# "It fires a lot" is not a reason — fix the code. CA1848 (LoggerMessage delegates) was
+# suppressed at one point and is deliberately not any more: the one log site in the API uses
+# the [LoggerMessage] source generator, which is also the right choice under Native AOT.
+#
+# CA2007 asks for ConfigureAwait(false) on every await. That rule exists for library authors
+# who may be called from a context with a SynchronizationContext. ASP.NET Core does not install
+# one, so ConfigureAwait(false) is a no-op here and would add noise to every await in the repo.
+# Microsoft's own guidance scopes this rule to libraries, not applications.
+dotnet_diagnostic.CA2007.severity = none
+
+[tests/**/*.cs]
+# CA1707 forbids underscores in member names. This repo deliberately diverges: test names are
+# written as sentences (Post_greetings_rejects_invalid_input) because xUnit's built-in assertions
+# give terse failure messages, so the name carries the explanation. A style decision, not laziness.
+dotnet_diagnostic.CA1707.severity = none
+# CA1711 reserves the "Collection" suffix for ICollection implementations, which collides with
+# xUnit's own convention for [CollectionDefinition] classes. xUnit's convention wins in tests.
+dotnet_diagnostic.CA1711.severity = none

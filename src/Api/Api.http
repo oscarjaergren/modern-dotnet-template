@@ -1,0 +1,35 @@
+@Api_HostAddress = http://localhost:5180
+
+### Liveness — proves the wiring
+GET {{Api_HostAddress}}/ping
+Accept: application/json
+
+### Greeting — valid request
+POST {{Api_HostAddress}}/greetings
+Content-Type: application/json
+
+{
+  "name": "Ada",
+  "age": 36
+}
+
+### Greeting — valid, age omitted
+POST {{Api_HostAddress}}/greetings
+Content-Type: application/json
+
+{
+  "name": "Ada"
+}
+
+### Greeting — invalid, expect 400 ValidationProblem
+POST {{Api_HostAddress}}/greetings
+Content-Type: application/json
+
+{
+  "name": "",
+  "age": 500
+}
+
+### The OpenAPI document this API serves (also committed as src/Api/openapi.json)
+GET {{Api_HostAddress}}/openapi/v1.json
+Accept: application/json

@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    Directory-scoped build config for test projects only. A Directory.Build.props here would
+    normally *stop* MSBuild walking further up, so the root one is imported explicitly first.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!-- xUnit v3 test projects are executables running on Microsoft.Testing.Platform. -->
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Global usings, declared once for every test project rather than repeated at the top of
+      every file. Add to this list rather than adding a using to fifty test files.
+    -->
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
