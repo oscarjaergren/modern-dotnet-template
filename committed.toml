@@ -1,0 +1,15 @@
+# Conventional Commits, enforced on every commit message.
+# CONTRIBUTING.md has claimed this convention since the first commit; this is what makes it true.
+style = "conventional"
+
+# The conventional-commit type is lowercase by design ("feat:", not "Feat:"), so committed's
+# default capitalisation rule has to be off or it rejects every valid message.
+subject_capitalized = false
+subject_not_punctuated = true
+
+# Generous, but catches a subject line that should have been a body.
+subject_length = 90
+line_length = 100
+
+# Allow the merge commits GitHub creates.
+merge_commit = false

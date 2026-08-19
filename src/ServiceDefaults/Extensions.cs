@@ -60,9 +60,14 @@ public static class Extensions
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>
                         // Health probes would otherwise dominate the traces.
+                        // OrdinalIgnoreCase, not the default: URL paths are not culture-sensitive
+                        // text, and with InvariantGlobalization=true a culture-aware comparison
+                        // behaves differently rather than failing. Flagged by MA0074.
                         options.Filter = context =>
-                            !context.Request.Path.StartsWithSegments(HealthEndpointPath)
-                            && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath))
+                            !context.Request.Path.StartsWithSegments(
+                                HealthEndpointPath, StringComparison.OrdinalIgnoreCase)
+                            && !context.Request.Path.StartsWithSegments(
+                                AlivenessEndpointPath, StringComparison.OrdinalIgnoreCase))
                     .AddHttpClientInstrumentation();
             });
 

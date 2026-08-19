@@ -1,0 +1,161 @@
+# Git hooks, run by prek (https://prek.j178.dev) — a single Rust binary, no Python needed.
+#
+# Bootstrap:  mise install && prek install
+# Run all:    prek run --all-files          (this is exactly what CI runs)
+# Run one:    prek run <hook-id> --all-files
+#
+# Design notes, because they are not obvious:
+#
+#   * These hooks VERIFY, they do not rewrite your files. Formatting is fixed at edit time
+#     (scripts/format.sh, wired into the agent hook) so that by commit time there is nothing to
+#     fix. A hook that rewrites files mid-commit means the commit contains content the author
+#     never saw. See docs/linting-and-hooks.md.
+#
+#   * fail_fast is off on purpose. One run reports every failure, so a fix is one round trip
+#     rather than one per problem.
+#
+#   * Tools are invoked through `mise exec` so the pinned version in mise.toml is always the one
+#     that runs. If mise is missing, the hook fails loudly rather than silently falling back to
+#     whatever happens to be on PATH.
+
+minimum_pre_commit_version: "3.2.0"
+fail_fast: false
+
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]
+
+exclude: '^(artifacts/|src/Api/openapi\.json$)'
+
+repos:
+  # ---------------------------------------------------------------------------------------------
+  # Hygiene. prek implements these natively in Rust, so they cost almost nothing.
+  # ---------------------------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: check-merge-conflict
+        # Without this it only fires while the repo is mid-merge, so a marker pasted in or left
+        # behind after a resolve is not caught. Verified: the default configuration misses it.
+        args: [--assume-in-merge]
+      - id: check-case-conflict          # breaks Windows clones, invisible on Linux
+      - id: check-json
+        # devcontainer.json is JSONC by specification — it permits comments, and ours uses them.
+        # A strict JSON parser is simply the wrong tool for that file; dprint handles the rest.
+        exclude: ^\.devcontainer/devcontainer\.json$
+      - id: check-yaml
+      - id: check-toml
+      - id: forbid-submodules
+      - id: mixed-line-ending
+        args: [--fix=no]                 # check only — .gitattributes owns the fixing
+      - id: detect-private-key
+
+  # ---------------------------------------------------------------------------------------------
+  # Local tools, all pinned by mise.toml.
+  # ---------------------------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      # --- secrets -----------------------------------------------------------------------------
+      - id: gitleaks
+        name: gitleaks (secret scan)
+        description: Scans staged changes. Once a secret is pushed, rotation is the only fix.
+        entry: mise exec -- gitleaks git --staged --redact --no-banner --verbose
+        language: system
+        pass_filenames: false
+
+      # --- spelling ----------------------------------------------------------------------------
+      - id: typos
+        name: typos (spelling)
+        entry: mise exec -- typos --force-exclude
+        language: system
+
+      # --- whitespace / EOL on the file types dotnet format never sees -------------------------
+      - id: editorconfig-checker
+        name: editorconfig-checker
+        description: Binary is `ec`, not `editorconfig-checker`.
+        entry: mise exec -- ec
+        language: system
+
+      # --- GitHub Actions, including the inline bash in ci.yml ---------------------------------
+      - id: actionlint
+        name: actionlint (workflows)
+        entry: mise exec -- actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+
+      # --- shell -------------------------------------------------------------------------------
+      - id: shellcheck
+        name: shellcheck
+        entry: mise exec -- shellcheck
+        language: system
+        files: \.sh$
+
+      # --- formatting: verify only. scripts/format.sh is the fixer. ----------------------------
+      # dprint is milliseconds, so it runs on commit. `dotnet format` takes ~5s because it loads
+      # the whole workspace even with --include, which would put the commit hook 3x over budget —
+      # so it runs on pre-push instead. Formatting is already fixed at edit time by
+      # .claude/hooks/format-cs.sh, making both of these a safety net rather than the mechanism.
+      - id: dprint-check
+        name: dprint (markdown, json)
+        description: Verifies only. Fix with scripts/format.sh
+        entry: mise exec -- dprint check
+        language: system
+        files: \.(md|json)$
+
+  # ---------------------------------------------------------------------------------------------
+  # commit-msg
+  # ---------------------------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: committed
+        name: committed (conventional commits)
+        entry: mise exec -- committed --commit-file
+        language: system
+        stages: [commit-msg]
+        always_run: true
+
+  # ---------------------------------------------------------------------------------------------
+  # pre-push — slower, whole repo. These are the things worth waiting seconds for.
+  # ---------------------------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: build
+        name: dotnet build (warnings are errors)
+        entry: dotnet build --nologo
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+
+      - id: test
+        name: dotnet test
+        entry: dotnet test --nologo
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+
+      - id: openapi-drift
+        name: openapi.json is current
+        entry: scripts/check-openapi-drift.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+
+      - id: dotnet-format-check
+        name: dotnet format (whole solution)
+        description: Verifies only. Fix with scripts/format.sh
+        entry: dotnet format ModernDotnetTemplate.slnx --verify-no-changes
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+
+      - id: lychee
+        name: lychee (link check)
+        entry: mise exec -- lychee --no-progress
+        language: system
+        stages: [pre-push]
+        files: \.md$

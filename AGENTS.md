@@ -16,16 +16,20 @@ The two sample slices (`Ping`, `Greetings`) exist to demonstrate conventions and
 
 Everything runs from the repo root.
 
-| Task | Command |
-|---|---|
-| Build | `dotnet build` |
-| All tests | `dotnet test` |
-| One project | `dotnet test --project tests/Api.UnitTests/Api.UnitTests.csproj` |
-| Format check | `dotnet format --verify-no-changes` |
-| Fix formatting | `dotnet format` |
-| Run locally | `aspire run` |
-| AOT publish | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64` |
-| Container | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer` |
+| Task             | Command                                                                         |
+| ---------------- | ------------------------------------------------------------------------------- |
+| Build            | `dotnet build`                                                                  |
+| All tests        | `dotnet test`                                                                   |
+| One project      | `dotnet test --project tests/Api.UnitTests/Api.UnitTests.csproj`                |
+| Format check     | `dotnet format --verify-no-changes`                                             |
+| Fix formatting   | `dotnet format`                                                                 |
+| Run locally      | `aspire run`                                                                    |
+| AOT publish      | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64`                     |
+| Container        | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer` |
+| Lint everything  | `prek run --all-files`                                                          |
+| Lint one check   | `prek run <hook-id> --all-files`                                                |
+| Fix formatting   | `scripts/format.sh`                                                             |
+| First-time setup | `mise install && prek install`                                                  |
 
 Note `dotnet test --project <path>`, not `dotnet test <path>` — this repo uses the
 Microsoft.Testing.Platform runner (opted into via `global.json`), where the old positional form
@@ -79,6 +83,11 @@ ProblemHttpResult>`) so it appears in the signature *and* in `openapi.json`. A t
 appears in neither, and becomes a 500 indistinguishable from a real bug. `CA1031` is an error, and
 `src/Api/Infrastructure/ProblemDetailsExceptionHandler.cs` is the safety net for what genuinely is
 exceptional. See [docs/errors-and-failures.md](docs/errors-and-failures.md).
+
+**Hooks run before every commit and push.** `prek` enforces secret scanning, spelling, formatting
+and workflow linting on commit, and build/test/link-check on push. Formatting is fixed at edit time
+so hooks only verify — they never rewrite your files. See
+[docs/linting-and-hooks.md](docs/linting-and-hooks.md).
 
 **Warnings are errors.** So are NuGet audit findings (`NU1903`) — a dependency with a known
 advisory fails `restore`, not review.
@@ -152,17 +161,18 @@ A green local `dotnet build && dotnet test && dotnet format --verify-no-changes`
 Everything above applies to every task. The pages below do not — open one only when its trigger
 matches, and expect it to answer the question on its own without needing a second page.
 
-| If you're… | Read |
-|---|---|
-| defining a request, response, value object, or anything that holds data | [docs/data-models.md](docs/data-models.md) |
-| an operation can fail, or you're about to `throw` | [docs/errors-and-failures.md](docs/errors-and-failures.md) |
-| two slices need the same code, or you're adding something that isn't a slice | [docs/code-organisation.md](docs/code-organisation.md) |
-| adding EF Core, Dapper, Postgres, or any persistence | [docs/adding-a-database.md](docs/adding-a-database.md) |
-| adding a NuGet package, or wondering why some library is missing | [docs/adding-a-dependency.md](docs/adding-a-dependency.md) |
-| hit by a trim/AOT warning, or removing the AOT gate | [docs/native-aot.md](docs/native-aot.md) |
-| blocked by a build gate, or changing what's enforced | [docs/build-gates.md](docs/build-gates.md) |
-| changing the container image, or working out how to deploy | [docs/containers-and-deployment.md](docs/containers-and-deployment.md) |
-| changing any doc or instruction file, or looking for the ADRs | [docs/documentation-approach.md](docs/documentation-approach.md) |
+| If you're…                                                                   | Read                                                                   |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| a hook blocked your commit, or you're adding a check                         | [docs/linting-and-hooks.md](docs/linting-and-hooks.md)                 |
+| defining a request, response, value object, or anything that holds data      | [docs/data-models.md](docs/data-models.md)                             |
+| an operation can fail, or you're about to `throw`                            | [docs/errors-and-failures.md](docs/errors-and-failures.md)             |
+| two slices need the same code, or you're adding something that isn't a slice | [docs/code-organisation.md](docs/code-organisation.md)                 |
+| adding EF Core, Dapper, Postgres, or any persistence                         | [docs/adding-a-database.md](docs/adding-a-database.md)                 |
+| adding a NuGet package, or wondering why some library is missing             | [docs/adding-a-dependency.md](docs/adding-a-dependency.md)             |
+| hit by a trim/AOT warning, or removing the AOT gate                          | [docs/native-aot.md](docs/native-aot.md)                               |
+| blocked by a build gate, or changing what's enforced                         | [docs/build-gates.md](docs/build-gates.md)                             |
+| changing the container image, or working out how to deploy                   | [docs/containers-and-deployment.md](docs/containers-and-deployment.md) |
+| changing any doc or instruction file, or looking for the ADRs                | [docs/documentation-approach.md](docs/documentation-approach.md)       |
 
 Adding a slice is a procedure rather than a decision, so it is a skill rather than a doc:
 `.claude/skills/add-slice/`. Non-Claude agents should follow the "Adding a slice" section above.

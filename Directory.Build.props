@@ -48,6 +48,10 @@
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
   </PropertyGroup>
 
+  <ItemGroup Label="Analyzers">
+    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
+  </ItemGroup>
+
   <PropertyGroup Label="Packaging">
     <IsPackable>false</IsPackable>
   </PropertyGroup>

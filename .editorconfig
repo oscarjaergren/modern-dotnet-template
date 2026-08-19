@@ -93,6 +93,12 @@ dotnet_diagnostic.CA1031.severity = error
 # Microsoft's own guidance scopes this rule to libraries, not applications.
 dotnet_diagnostic.CA2007.severity = none
 
+# MA0004 is Meziantou's version of the exact same rule, and gets the same answer for the same
+# reason. A concrete example of why this repo runs ONE third-party analyzer rather than three:
+# every additional vendor brings its own copy of rules you have already made a decision about,
+# and nobody resolves the conflicts for you. See docs/build-gates.md.
+dotnet_diagnostic.MA0004.severity = none
+
 [tests/**/*.cs]
 # CA1707 forbids underscores in member names. This repo deliberately diverges: test names are
 # written as sentences (Post_greetings_rejects_invalid_input) because xUnit's built-in assertions
@@ -101,3 +107,10 @@ dotnet_diagnostic.CA1707.severity = none
 # CA1711 reserves the "Collection" suffix for ICollection implementations, which collides with
 # xUnit's own convention for [CollectionDefinition] classes. xUnit's convention wins in tests.
 dotnet_diagnostic.CA1711.severity = none
+
+[src/AppHost/AppHost.cs]
+# MA0048 wants the file named after its type, but top-level statements make the compiler
+# synthesise a `Program` class that was never written here. The name AppHost.cs is Aspire's
+# convention and is what every Aspire doc and template refers to; renaming to Program.cs to
+# satisfy an analyzer would make the repo harder to read, not easier.
+dotnet_diagnostic.MA0048.severity = none

@@ -67,16 +67,35 @@ Symbolication is not lost: the identical `Api.dbg` is still written to
 Note that filtering `ResolvedFileToPublish` does **not** work for this — the native `.dbg` never
 passes through that item group. Use the property.
 
+## Why VerifyReferenceAotCompatibility is not set
+
+`VerifyReferenceAotCompatibility=true` verifies that every referenced assembly is *annotated* as
+AOT-compatible. It was tried and removed.
+
+Turned on, it produced **104 `IL3058` errors** — the entire ASP.NET Core shared framework
+(Antiforgery, Authentication, Authorization, Blazor components), plus Polly via
+`Microsoft.Extensions.Http.Resilience`. The same build publishes with **zero** AOT warnings.
+
+The two disagree because they measure different things. `VerifyReferenceAotCompatibility` checks an
+assembly-level *annotation*, so a library that is perfectly AOT-safe fails simply because its authors
+never added the attribute — which is the case for Polly and most of ASP.NET Core. The publish-time
+ILC analysis is *reachability*-based: it examines the code you actually call. That is both stricter
+where it matters and quiet where it does not, and it is what the CI gate already runs.
+
+The property is built for libraries with a small, curated set of package references. An ASP.NET Core
+app framework-references the whole shared framework, so it can only ever report the framework's
+missing annotations. Do not re-enable it expecting signal.
+
 ## Size tuning
 
 Not enabled by default. If you need a smaller binary:
 
-| Setting | Effect |
-|---|---|
-| `OptimizationPreference=Size` | modest |
-| `IlcFoldIdenticalMethodBodies=true` | small, safe |
-| `UseSystemResourceKeys=true` | strips exception message text |
-| `StackTraceSupport=false` | largest single win, **degrades production diagnostics** |
+| Setting                             | Effect                                                  |
+| ----------------------------------- | ------------------------------------------------------- |
+| `OptimizationPreference=Size`       | modest                                                  |
+| `IlcFoldIdenticalMethodBodies=true` | small, safe                                             |
+| `UseSystemResourceKeys=true`        | strips exception message text                           |
+| `StackTraceSupport=false`           | largest single win, **degrades production diagnostics** |
 
 `StackTraceSupport=false` is deliberately not a default. Trading away crash diagnostics for a
 single-digit percentage of binary size is a bad bargain for most services, and an especially bad one

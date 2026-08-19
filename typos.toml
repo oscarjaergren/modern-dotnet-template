@@ -1,0 +1,12 @@
+# Spell checking. Deliberately narrow: typos has a very low false-positive rate, so an exclusion
+# here should be a real word it does not know, not a way to silence a genuine typo.
+
+[files]
+# Vendored verbatim from `dotnet new gitignore`. It contains real product names (Tye, Paket) and
+# regex character classes like *.[Pp]ublish.xml that read as misspellings. Not ours to edit.
+extend-exclude = [".gitignore"]
+
+[default.extend-words]
+# .NET ecosystem names typos does not ship in its dictionary.
+Tye = "Tye"
+Paket = "Paket"

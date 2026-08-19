@@ -3,6 +3,15 @@
 Thanks for taking a look. This is a template repository, so the bar for additions is deliberately
 high: anything added here is inherited by every project generated from it.
 
+## Setup
+
+```bash
+mise install    # pinned linters
+prek install    # git hooks
+```
+
+Without `prek install` a fresh clone has no hooks, and nothing will tell you.
+
 ## Before you open a PR
 
 ```bash

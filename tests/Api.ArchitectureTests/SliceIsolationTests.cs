@@ -34,7 +34,7 @@ public class SliceIsolationTests
 
             foreach (var from in slices)
             {
-                foreach (var to in slices.Where(s => s != from))
+                foreach (var to in slices.Where(s => !string.Equals(s, from, StringComparison.Ordinal)))
                 {
                     data.Add(from, to);
                 }

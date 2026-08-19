@@ -3,17 +3,18 @@
 Reference material, read on demand. Day-to-day conventions live in
 [`AGENTS.md`](../AGENTS.md) — that is the always-loaded file, and it carries the same index as below.
 
-| Read this if you're… | Page |
-|---|---|
-| defining a request, response, value object, or anything that holds data | [data-models.md](data-models.md) |
-| an operation can fail, or you're about to `throw` | [errors-and-failures.md](errors-and-failures.md) |
-| two slices need the same code, or you're adding something that isn't a slice | [code-organisation.md](code-organisation.md) |
-| adding EF Core, Dapper, Postgres, or any persistence | [adding-a-database.md](adding-a-database.md) |
-| adding a NuGet package, or wondering why some library is missing | [adding-a-dependency.md](adding-a-dependency.md) |
-| hit by a trim/AOT warning, or removing the AOT gate | [native-aot.md](native-aot.md) |
-| blocked by a build gate, or changing what's enforced | [build-gates.md](build-gates.md) |
-| changing the container image, or working out how to deploy | [containers-and-deployment.md](containers-and-deployment.md) |
-| changing any doc or instruction file, or looking for the ADRs | [documentation-approach.md](documentation-approach.md) |
+| Read this if you're…                                                         | Page                                                         |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| a hook blocked your commit, or you're adding a check                         | [linting-and-hooks.md](linting-and-hooks.md)                 |
+| defining a request, response, value object, or anything that holds data      | [data-models.md](data-models.md)                             |
+| an operation can fail, or you're about to `throw`                            | [errors-and-failures.md](errors-and-failures.md)             |
+| two slices need the same code, or you're adding something that isn't a slice | [code-organisation.md](code-organisation.md)                 |
+| adding EF Core, Dapper, Postgres, or any persistence                         | [adding-a-database.md](adding-a-database.md)                 |
+| adding a NuGet package, or wondering why some library is missing             | [adding-a-dependency.md](adding-a-dependency.md)             |
+| hit by a trim/AOT warning, or removing the AOT gate                          | [native-aot.md](native-aot.md)                               |
+| blocked by a build gate, or changing what's enforced                         | [build-gates.md](build-gates.md)                             |
+| changing the container image, or working out how to deploy                   | [containers-and-deployment.md](containers-and-deployment.md) |
+| changing any doc or instruction file, or looking for the ADRs                | [documentation-approach.md](documentation-approach.md)       |
 
 ## How these are written
 

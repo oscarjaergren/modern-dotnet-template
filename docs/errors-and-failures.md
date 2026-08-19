@@ -91,14 +91,14 @@ The question gets harder once you add a domain layer, because `Results<...>` is 
 your domain should not know about HTTP. A multi-step operation that can fail partway needs its own
 way to say so. These are the options, and none of them is in this template.
 
-| Option | Shape | Cost |
-|---|---|---|
-| `ErrorOr` | `ErrorOr<T>` with an error list | Small, focused, widely used. One more dependency, and its style spreads. |
-| `FluentResults` | `Result<T>` with reasons/metadata | Richer, heavier. Encourages stuffing context into results. |
-| `OneOf` | `OneOf<T1, T2>` generic unions | Closest to a real union type. Verbose call sites; poor exhaustiveness guarantees. |
-| `CSharpFunctionalExtensions` | `Result<T, E>`, `Maybe<T>` | Opinionated in a good way if you want the whole functional style. All or nothing. |
-| `LanguageExt` | Full functional prelude | Very large. Changes how the whole codebase reads. |
-| Hand-rolled `Result<T>` | ~40 lines you own | No dependency, no licence risk. You will get exhaustiveness wrong, and every team writes a slightly different one. |
+| Option                       | Shape                             | Cost                                                                                                               |
+| ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `ErrorOr`                    | `ErrorOr<T>` with an error list   | Small, focused, widely used. One more dependency, and its style spreads.                                           |
+| `FluentResults`              | `Result<T>` with reasons/metadata | Richer, heavier. Encourages stuffing context into results.                                                         |
+| `OneOf`                      | `OneOf<T1, T2>` generic unions    | Closest to a real union type. Verbose call sites; poor exhaustiveness guarantees.                                  |
+| `CSharpFunctionalExtensions` | `Result<T, E>`, `Maybe<T>`        | Opinionated in a good way if you want the whole functional style. All or nothing.                                  |
+| `LanguageExt`                | Full functional prelude           | Very large. Changes how the whole codebase reads.                                                                  |
+| Hand-rolled `Result<T>`      | ~40 lines you own                 | No dependency, no licence risk. You will get exhaustiveness wrong, and every team writes a slightly different one. |
 
 ## Why the template picks none of them — and why you might not either
 

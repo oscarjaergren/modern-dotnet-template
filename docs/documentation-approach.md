@@ -86,11 +86,11 @@ an agent that reads half a truncated page acts on it.
 
 Requirement 3, made concrete. The split is by **when a file is read**, not by subject:
 
-| Layer | Loaded | Holds |
-|---|---|---|
-| `AGENTS.md` | always | conventions, commands, traps, and the index pointing here |
-| `.claude/skills/*/SKILL.md` | when the task matches | how to *do* a specific thing |
-| `docs/*.md` | on demand, via the index | what something *is* and why |
+| Layer                       | Loaded                   | Holds                                                     |
+| --------------------------- | ------------------------ | --------------------------------------------------------- |
+| `AGENTS.md`                 | always                   | conventions, commands, traps, and the index pointing here |
+| `.claude/skills/*/SKILL.md` | when the task matches    | how to *do* a specific thing                              |
+| `docs/*.md`                 | on demand, via the index | what something *is* and why                               |
 
 The rule of thumb: **if it describes how to do something it is a skill; if it describes what
 something is, it is a document.** If getting it wrong would break the build or fail silently, it

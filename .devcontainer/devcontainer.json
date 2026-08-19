@@ -16,7 +16,9 @@
 
   // Native AOT shells out to clang and the system linker. Without these, `dotnet publish`
   // fails at the "Generating native code" step with a confusing linker error.
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev && dotnet tool restore && dotnet restore",
+  // The devcontainer owns the OS layer (system packages, docker); mise.toml owns tool versions.
+  // Keeping them separate means the linter versions are identical inside and outside a container.
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev && curl -fsSL https://mise.run | sh && ~/.local/bin/mise install && ~/.local/bin/mise exec -- prek install && dotnet tool restore && dotnet restore",
 
   "customizations": {
     "vscode": {

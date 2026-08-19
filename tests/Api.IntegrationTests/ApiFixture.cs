@@ -43,6 +43,3 @@ public sealed class ApiFixture : IAsyncLifetime
         }
     }
 }
-
-[CollectionDefinition(nameof(ApiCollection))]
-public sealed class ApiCollection : ICollectionFixture<ApiFixture>;

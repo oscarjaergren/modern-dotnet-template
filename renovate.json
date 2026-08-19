@@ -7,18 +7,26 @@
     "helpers:pinGitHubActionDigests"
   ],
   "timezone": "Europe/Stockholm",
-  "schedule": ["before 6am on monday"],
+  "schedule": [
+    "before 6am on monday"
+  ],
   "prConcurrentLimit": 5,
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "description": "Aspire ships its packages as a matched set; a partial bump does not build.",
-      "matchPackageNames": ["Aspire.**"],
+      "matchPackageNames": [
+        "Aspire.**"
+      ],
       "groupName": "Aspire"
     },
     {
       "description": "OpenTelemetry packages version in lockstep across instrumentation and exporters.",
-      "matchPackageNames": ["OpenTelemetry.**"],
+      "matchPackageNames": [
+        "OpenTelemetry.**"
+      ],
       "groupName": "OpenTelemetry"
     },
     {
@@ -32,24 +40,44 @@
     },
     {
       "description": "Test tooling moves together.",
-      "matchPackageNames": ["xunit**", "TngTech.ArchUnitNET**"],
+      "matchPackageNames": [
+        "xunit**",
+        "TngTech.ArchUnitNET**"
+      ],
       "groupName": "test tooling"
     },
     {
       "description": "Actions are pinned by digest; group the digest bumps into one PR.",
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "GitHub Actions"
     },
     {
-      "description": "Never auto-bump the SDK across a major — that is a deliberate migration.",
-      "matchManagers": ["dotnet-sdk"],
-      "matchUpdateTypes": ["major"],
+      "description": "Never auto-bump the SDK across a major \u2014 that is a deliberate migration.",
+      "matchManagers": [
+        "dotnet-sdk"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "enabled": false
+    },
+    {
+      "description": "Linter versions pinned in mise.toml rot like any other dependency.",
+      "matchManagers": [
+        "mise"
+      ],
+      "groupName": "lint toolchain"
     }
   ],
   "vulnerabilityAlerts": {
-    "labels": ["security"],
-    "schedule": ["at any time"],
+    "labels": [
+      "security"
+    ],
+    "schedule": [
+      "at any time"
+    ],
     "prPriority": 10
   },
   "lockFileMaintenance": {

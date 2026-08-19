@@ -8,15 +8,15 @@ gates, and the instruction files rather than being a section in this README.
 
 ## What you get
 
-| | |
-|---|---|
-| Runtime | .NET 10 (LTS), pinned via `global.json` |
-| API | Minimal APIs, `Features/` slices, no dispatch framework |
+|               |                                                                         |
+| ------------- | ----------------------------------------------------------------------- |
+| Runtime       | .NET 10 (LTS), pinned via `global.json`                                 |
+| API           | Minimal APIs, `Features/` slices, no dispatch framework                 |
 | Orchestration | Aspire 13 — OpenTelemetry, health checks, resilience, service discovery |
-| Deployment | Native AOT → **14.3 MB** container image, no Dockerfile |
-| Tests | xUnit v3: unit, integration (Aspire), and architecture |
-| Contract | `openapi.json` generated at build, committed, drift-gated in CI |
-| Agents | `AGENTS.md`, a slice skill, a review subagent, a format hook |
+| Deployment    | Native AOT → **14.3 MB** container image, no Dockerfile                 |
+| Tests         | xUnit v3: unit, integration (Aspire), and architecture                  |
+| Contract      | `openapi.json` generated at build, committed, drift-gated in CI         |
+| Agents        | `AGENTS.md`, a slice skill, a review subagent, a format hook            |
 
 ## Quickstart
 
@@ -26,6 +26,7 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and the Aspire
 ```bash
 git clone https://github.com/<you>/modern-dotnet-template.git
 cd modern-dotnet-template
+mise install && prek install   # pinned linters + git hooks
 dotnet build && dotnet test
 ```
 

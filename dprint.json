@@ -1,0 +1,23 @@
+{
+  "json": {
+    "indentWidth": 2
+  },
+  "markdown": {
+    "textWrap": "maintain",
+    "emphasisKind": "asterisks",
+    "strongKind": "asterisks"
+  },
+  "excludes": [
+    "**/artifacts/**",
+    "**/bin/**",
+    "**/obj/**",
+    "src/Api/openapi.json",
+    "**/*-lock.json",
+    "mise.lock",
+    "**/*.md.bak"
+  ],
+  "plugins": [
+    "npm:@dprint/json@0.23.0",
+    "npm:@dprint/markdown@0.22.1"
+  ]
+}

@@ -1,0 +1,27 @@
+# Pinned versions for every linter the git hooks run.
+#
+# One source of truth: the devcontainer calls `mise install` rather than listing tools itself, and
+# CI installs from this file too, so a laptop, a devcontainer and a CI runner all get identical
+# binaries. That matters because the alternative — "install these nine tools yourself" — is the
+# single most common reason a hook silently does nothing.
+#
+# The .NET SDK is deliberately NOT managed here. global.json already pins it, and two mechanisms
+# claiming the same responsibility is how they drift apart.
+#
+# Bootstrap:  mise install && prek install --install-hooks
+# Update:     mise outdated  (Renovate also raises PRs against this file)
+
+[tools]
+prek = "0.4.14"                  # git hook manager
+gitleaks = "8.30.1"              # secret scanning
+typos = "1.49.0"                 # spelling
+editorconfig-checker = "3.11.1"  # .editorconfig compliance for non-C# files
+actionlint = "1.7.12"            # GitHub Actions workflows
+shellcheck = "0.11.0"            # shell scripts, and actionlint's inline-bash checks
+dprint = "0.56.0"                # markdown + json formatting
+lychee = "0.24.2"                # link checking (pre-push: network-bound)
+committed = "1.1.11"             # conventional commit messages
+
+[settings]
+# Fail rather than silently using whatever happens to be on PATH.
+lockfile = true
