@@ -130,7 +130,10 @@ repos:
 
       - id: test
         name: dotnet test
-        entry: dotnet test --nologo
+        # NOT `dotnet test --nologo`. The Microsoft.Testing.Platform runner does not accept that
+        # flag and silently matches zero test modules — it reports "Zero tests ran" and would look
+        # like a pass to anyone not reading the exit code. Verified: plain runs 24, --nologo runs 0.
+        entry: dotnet test
         language: system
         stages: [pre-push]
         pass_filenames: false
