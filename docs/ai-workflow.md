@@ -53,15 +53,28 @@ and **MCP tool definitions are re-sent on every turn** — each connected server
 }
 ```
 
-### The compaction trade-off
+### Compaction: configure it, do not police it
 
-Lower `autoCompactWindow` is usually sold as a straight win. It is not: **compaction rewrites the
-prefix, so it invalidates the prompt cache**, and the pass itself costs 100–200k tokens. Long
-sessions win — you stop carrying a huge prefix every turn. Short sessions lose — you paid to reset a
-cache you were about to stop using.
+A lot of advice says to watch a context gauge and run `/compact` manually at 60–70%. Ignore that.
+It requires constant vigilance, it interrupts whatever you were thinking about, and a practice that
+depends on remembering is a practice that fails.
 
-Compacting *deliberately* at 60–70% beats letting auto-compaction fire at 93%, because you choose
-the moment and you know what was in context.
+**`autoCompactWindow` is an absolute token count, not a percentage.** Setting it to `300000` *is*
+"compact earlier", applied automatically, with no gauge-watching. That is the whole fix.
+
+What is worth doing by hand is **`/clear` when you switch to unrelated work**. It is tied to a
+natural boundary you already notice — you finished the thing — rather than to a number you have to
+monitor. It is also strictly cheaper than compaction: no summarisation pass at all, and the next
+task starts on a clean, cacheable prefix.
+
+The trade-off in the setting itself is real: compaction rewrites the prefix, so it **invalidates the
+prompt cache**, and each pass costs 100–200k tokens. Long sessions win, because you stop carrying a
+huge prefix on every turn. Short sessions lose, because you paid to reset a cache you were about to
+abandon anyway. If your sessions are short and task-scoped, leave the default alone and lean on
+`/clear`.
+
+Reserve manual `/compact` for the one case configuration cannot cover: you are mid-task, context is
+filling, and you specifically want to control what survives the summary.
 
 ## `.claudeignore`
 
