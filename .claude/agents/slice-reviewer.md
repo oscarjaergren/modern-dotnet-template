@@ -2,6 +2,8 @@
 name: slice-reviewer
 description: Reviews a vertical slice for isolation, nullability, Native AOT safety, and test coverage before a PR. Use after adding or changing a slice in this template.
 tools: Read, Grep, Glob, Bash
+# Mid-tier on purpose: reviewing needs judgement, but not the top tier. Model routing is the
+# largest measured lever on token cost — see docs/ai-workflow.md.
 model: sonnet
 ---
 

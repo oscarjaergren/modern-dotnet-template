@@ -162,6 +162,7 @@ matches, and expect it to answer the question on its own without needing a secon
 
 | If you're…                                                                   | Read                                                                   |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| working with an agent here, or your token bill is too high                   | [docs/ai-workflow.md](docs/ai-workflow.md)                             |
 | writing C# here, or wondering why the code looks like it does                | [docs/code-style.md](docs/code-style.md)                               |
 | a hook blocked your commit, or you're adding a check                         | [docs/linting-and-hooks.md](docs/linting-and-hooks.md)                 |
 | defining a request, response, value object, or anything that holds data      | [docs/data-models.md](docs/data-models.md)                             |

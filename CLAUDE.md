@@ -16,6 +16,9 @@ import is used instead. See `docs/documentation-approach.md`.
   including the traps that cause silent failures. Prefer it over improvising.
 - **`slice-reviewer`** (`.claude/agents/`) — reviews a slice for isolation, nullability, AOT safety,
   and test coverage. Worth running before opening a PR.
+- **`codebase-locator`** (`.claude/agents/`) — answers "where is X?" on the cheapest model tier, in
+  its own context window, so the main thread never pays for the files it opened. Prefer it over
+  searching from the main thread. See [docs/ai-workflow.md](docs/ai-workflow.md).
 - A `PostToolUse` hook runs `dotnet format` on any `.cs` file you edit, so formatting stays
   CI-clean without being asked. Do not hand-format to satisfy it.
 
