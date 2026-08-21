@@ -2,142 +2,111 @@
 
 **Read this if:** you are considering a plugin, skill or proxy that promises to cut your token bill.
 
-## The short version
+## The one thing that predicts whether a tool helps
 
-Two of the most widely recommended tools were evaluated here. **One is actively harmful and one is
-merely pointless**, which are different verdicts and are argued separately below. Neither is
-installed, but only one of them is a mistake to use.
+**Which layer it works at.** That single question predicts the return better than any benchmark,
+because it determines the size of the pool the tool is allowed to drain.
 
-The reasoning generalises past both, so it is worth understanding rather than taking the conclusion.
+In agentic coding, output is a small fraction of spend, and input dominated by **re-sent context** is
+almost all of it. So:
 
-**The cost model is why.** In agentic coding, output is a small fraction of the bill, input
-dominates, and most input is re-sent context billed at roughly a tenth the rate. A tool that
-compresses what the agent *says*, or that compresses individual shell outputs, is working on the
-cheapest categories. Full reasoning in [ai-workflow.md](ai-workflow.md).
+| Layer                                 | Ceiling      | Why                                                                            |
+| ------------------------------------- | ------------ | ------------------------------------------------------------------------------ |
+| Agent's prose output                  | ~5% of spend | Output is ~5% of the bill (derived below). Even removing *all* of it saves 5%. |
+| One command's output                  | small        | Only some commands, seen once, mostly not re-sent.                             |
+| **Re-sent context / history**         | **large**    | Every token here is billed again on every turn.                                |
+| **Not sending it at all** (retrieval) | **largest**  | A file never read costs nothing to compress.                                   |
 
-## The measurements
+A tool at the bottom of that table can beat a perfect tool at the top.
 
-| Tool                                     | Advertised              | Measured                                                                           |
-| ---------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| CAVEMAN (terse agent output)             | 65% output-token saving | **8.5%** output tokens — the cheapest category, so ~no bill impact                 |
-| RTK (compresses shell output via a hook) | 60–90% cost reduction   | **+7.6% more expensive** at low effort (p=0.004) via **+13.8% turns**; ±0% at high |
+## Measured results
 
-Two independent analyses, different methods, same conclusion:
+From a production replay over **614 million tokens and $926 of real spend**, with three tools
+measured simultaneously:
 
-- **A paired A/B on SkillsBench** — an independent open benchmark (87 tasks, 24 model-harness
-  configurations, 3 trials each), run by JetBrains. Quality was unaffected in both cases.
-- **A production replay over 614 million tokens and $926 of real spend**, measuring three such tools
-  at once: RTK saved **0.5%** of actual spend, CAVEMAN **0.4%**, all three combined **3.7%**.
+| Tool         | Layer                      | Share of actual spend saved |
+| ------------ | -------------------------- | --------------------------- |
+| **Headroom** | API proxy, re-sent context | **2.8%**                    |
+| RTK          | shell command output       | 0.5%                        |
+| CAVEMAN      | agent prose output         | 0.4%                        |
+| Combined     |                            | 3.7%                        |
 
-The replay's conclusion is the line worth keeping:
+Headroom alone beats the other two together by roughly 3×, and it is not close. That is the layer
+argument in one line.
 
-> "The advertised numbers are not exaggerated. Each measures a different thing on a different
-> workload."
+Separately, a paired A/B on **SkillsBench** (an independent open benchmark — 87 tasks, 24
+model-harness configurations, 3 trials each, run by JetBrains) measured CAVEMAN at 8.5% of output
+tokens against an advertised 65%, and found RTK **+7.6% more expensive** at low reasoning effort
+(p=0.004) while neutral at high effort. Quality was unaffected in both cases.
 
-**The vendors are not lying.** RTK really does compress shell output by 60–90%. That compression is
-simply half a percent of the bill.
+### Where the 5% figure comes from
 
-### How removing tokens makes the bill go up
+The two studies cross-check each other. CAVEMAN saves **8.5% of output tokens** and **0.4% of
+actual spend**. For both to hold, output must be about **5% of what you pay**.
 
-This is the counterintuitive part, and the benchmark measured the mechanism rather than guessing at
-it: **the agent took +13.8% more turns** (p=0.03).
+That number bounds every output-compression tool that will ever be pitched to you.
 
-Compression saves bytes **once**. An extra turn re-sends the **entire conversation prefix**.
+## Verdicts
 
-Illustrative arithmetic — the mechanism is measured, these numbers are not:
+**Headroom — worth trying.** Apache-2.0, and it works across Claude Code, Codex, Cursor, OpenCode
+and MCP clients rather than one vendor. It compresses the *live zone* — the uncached part of the
+context — while **preserving the cache prefix**, so it does not trigger the full-price re-read that
+compaction does. Its compressors are content-typed: deduplicating search-result rows by score,
+format-aware reduction for git diffs and JSON arrays. Median compression reaches 54% on ideal
+payloads; the 2.8% overall reflects that most real payloads are plain text with little duplication.
 
-- Mid-session context ~60,000 tokens.
-- Compressing one `git status` from ~1,500 to ~150 tokens saves ~1,350, once.
-- One extra turn re-sends all 60,000. Even at the cached rate that is ~6,000 token-equivalents.
+**CAVEMAN — fine, use it if you like terse output.** It saves 0.4%, which will not show on an
+invoice, but it costs nothing, has no quality impact (8 better / 10 worse / 64 tied, p=0.82), and
+terser agent output is genuinely nicer to read. Its reported +11.6% in one benchmark was a single
+outlier task crossing a pricing tier — variance, not a finding. There is no mechanism by which it
+hurts.
 
-So a single extra turn costs roughly **four times** what that compression saved. On a 20-turn task,
-+13.8% is ~2.8 extra turns — you would need a dozen successful compressions just to break even, with
-a tool that only sees about a third of bash calls.
+**RTK — the one to avoid.** Not because the compression is fake; it genuinely compresses shell
+output 60–90%. Because it makes the agent take **+13.8% more turns** (p=0.03), and a turn re-sends
+the entire prefix. Compression saves bytes once; a retry costs the whole context. The causes were
+compression-induced re-reads (paying for the filtered output *and* then the raw one) and a broken
+rewrite of compound `find` predicates. The penalty vanishes at high reasoning effort, which is the
+tell: a stronger model infers what compression removed, a weaker one asks again. RTK is a local
+binary consuming no tokens itself — every extra penny came from the agent behaving differently.
 
-Three causes were identified:
+## The wider ecosystem
 
-- **Compression-induced re-reads.** Filtered output lacked the detail the agent needed, so it re-ran
-  the command or read the file raw — paying for both versions.
-- **A genuinely broken rewrite.** Compound `find` predicates were mangled into usage errors,
-  forcing recovery loops.
-- **Effort dependence, which is the tell.** The penalty vanished at high reasoning effort (+0.1%
-  median): the model "seems to waste fewer turns reacting to compressed output". A weaker model
-  cannot infer what compression removed, so it asks again.
+Compression is only one layer. The tools worth knowing, by what they actually do:
 
-That last point matters because it rules out the boring explanation. The tool is a local binary and
-consumes no tokens itself — every extra penny came from the **agent behaving differently**.
+| Tool                   | Layer                     | What it does                                                                          |
+| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------- |
+| Headroom               | compression (context)     | API-layer proxy, content-typed compressors, preserves cache prefix                    |
+| Context Mode           | compression (tool output) | Sandboxes large outputs — test logs, DOM snapshots, MCP payloads — into local indexes |
+| RTK                    | compression (shell)       | Rewrites shell commands via a hook                                                    |
+| CAVEMAN                | compression (output)      | Strips filler from the agent's prose                                                  |
+| Token Savior           | **retrieval**             | Symbol summaries before full files; progressive code reading via MCP                  |
+| claude-context         | **retrieval**             | Repository embeddings, semantic search                                                |
+| code-review-graph      | code graph                | Tree-sitter structure map; dependency and blast-radius questions                      |
+| memsearch / claude-mem | memory                    | Durable decisions across sessions                                                     |
 
-### The structural reasons it cannot be fixed
+The retrieval tools are structurally the most interesting and the least measured. Not sending a file
+beats compressing it, and a symbol summary instead of a 600-line file is a bigger win than any
+compressor can offer on that file. If you experiment with one thing here, make it a retrieval tool.
 
-- It compresses the cheapest category (see the cost model above).
-- It only intercepts shell commands. Built-in file-read and search tools bypass it entirely, about
-  half of what agents run is uncovered commands like `python3`, and what remains carries under 20%
-  of tool-result characters.
-- Cached re-reads dominate; on *new* input the measured change was +3.2% (p=0.23 — noise).
-- It estimates tokens as characters / 4 and scores itself against a counterfactual the billing
-  system never applies: the scoreboard reported 96 million tokens saved while the invoice went up.
+## Nothing here is installed in this template
 
-### The two tools deserve different verdicts
+Not a verdict on the tools — a scope decision. A template ships to people with different agents,
+budgets and workflows, and a proxy or plugin is a personal choice rather than a property of a .NET
+codebase. What the template *does* do is the structural work: layered docs, isolated subagents,
+explicit model routing. See [ai-workflow.md](ai-workflow.md).
 
-Filing them together would be sloppy, and they are not the same case.
-
-|                    | RTK                                         | CAVEMAN                        |
-| ------------------ | ------------------------------------------- | ------------------------------ |
-| Effect on the bill | **+7.6%**, systematic, mechanism identified | **−0.4%**, real but negligible |
-| Effect on quality  | none                                        | none                           |
-| Verdict            | **actively harmful**                        | **harmless**                   |
-
-RTK makes the agent take more turns, and turns are the expensive unit. CAVEMAN does not — there is
-no turn-count penalty and no mechanism by which it hurts. Its reported +11.6% was a *single outlier
-task* crossing a pricing tier: variance, not a finding.
-
-**So use CAVEMAN if you like terse output.** That is a legitimate reason and it costs nothing. Just
-do not expect it to show up on an invoice.
-
-### How small is 0.4%, and why that number is trustworthy
-
-The two studies cross-check each other. CAVEMAN saves **8.5% of output tokens** (paired A/B) and
-**0.4% of actual spend** (production replay). For both to be true, **output must be about 5% of what
-you pay** — which is exactly what you would predict from a workload dominated by re-sent, cached
-input.
-
-That 5% figure is the useful takeaway, because it bounds *every* output-compression tool that will
-ever be pitched to you. Even a perfect one — 100% of output removed — saves you 5%.
-
-### The actual risk, which is not the tool
-
-Neither tool will hurt you if you understand what it does. The expensive mistake is believing that
-installing one means token optimisation is handled.
-
-Model routing and cache protection are worth 10–50%. A 0.4% skill that *feels* like a solution can
-cost far more than it saves by ending the search. Fix the denominators first, then add the rounding
-errors if you enjoy them.
-
-**Disclosure:** JetBrains sells competing agent tooling and launched a competing context product the
-same month. That is a real interest. What defuses it is not trust — it is that the benchmark is
-third-party and open, the methodology and p-values are published, the findings were quality-neutral
-rather than a hatchet job, and an unaffiliated replay using a completely different method reached
-the same place.
-
-**The generalisable lesson, which outlives both tools:** a tool that reports its own savings against
-a counterfactual it invented is not evidence. Only a paired A/B against the invoice is. Apply that
-to the next tool advertising 90%.
-
-## Memory and context plugins
-
-Same answer, different reason. Agents increasingly ship built-in memory — Claude Code has
-`autoMemoryEnabled` on by default — and this repo's layered docs already do what context plugins
-target. Adding a third-party store would mean two or three systems that can disagree about what is
-true, which is the failure this repo avoids everywhere else.
-
-If you adopt one anyway, prefer the one your agent vendor ships, and check what memory the agent
-already has before assuming a plugin adds anything.
+Memory plugins are the one case where a specific caution applies: agents increasingly ship built-in
+memory, so check what yours already has before adding a second store that can disagree with it.
 
 ## How to evaluate the next one
 
-Do not trust a tool's own scoreboard — including any number on this page.
+Do not trust a tool's own scoreboard — including the numbers on this page.
 
+- Ask **which layer it works at** first. That bounds the answer before you install anything.
 - Compare **invoices**, not token estimates, across a week with and without it.
 - Watch the **cache-read ratio** and per-turn input across a long session.
-- If you A/B it, keep the task set fixed and run it more than once. The published numbers moved with
-  reasoning effort, and a single outlier task was enough to swing one result by 11%.
+- Keep the task set fixed and run it more than once. Published results moved with reasoning effort,
+  and a single outlier task was enough to swing one figure by 11%.
+- Be suspicious of any tool that reports its own savings. One scoreboard claimed 96 million tokens
+  saved while the invoice went up, because it scored against a counterfactual the billing system
+  never applies.

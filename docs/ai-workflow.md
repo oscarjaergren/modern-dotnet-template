@@ -133,6 +133,7 @@ Do not trust a tool's own scoreboard, including any claim on this page.
 
 ## Before you install a token-saving tool
 
-Two widely recommended ones measurably cost *more* on real agent work, for reasons that follow
-directly from the cost model above. See
-[token-saving-tools.md](token-saving-tools.md) before adopting any of them.
+Ask **which layer it works at** — that bounds the return before you install anything. A tool
+compressing the agent's prose is capped at ~5% of your bill; one compressing re-sent context is not.
+Measured results for the main options, including one worth trying and one to avoid, are in
+[token-saving-tools.md](token-saving-tools.md).
