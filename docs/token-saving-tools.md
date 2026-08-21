@@ -4,8 +4,11 @@
 
 ## The short version
 
-Two of the most widely recommended tools were evaluated here and neither is used. The reason
-generalises, so it is worth understanding rather than just taking the conclusion.
+Two of the most widely recommended tools were evaluated here. **One is actively harmful and one is
+merely pointless**, which are different verdicts and are argued separately below. Neither is
+installed, but only one of them is a mistake to use.
+
+The reasoning generalises past both, so it is worth understanding rather than taking the conclusion.
 
 **The cost model is why.** In agentic coding, output is a small fraction of the bill, input
 dominates, and most input is re-sent context billed at roughly a tenth the rate. A tool that
@@ -74,15 +77,41 @@ consumes no tokens itself — every extra penny came from the **agent behaving d
 - It estimates tokens as characters / 4 and scores itself against a counterfactual the billing
   system never applies: the scoreboard reported 96 million tokens saved while the invoice went up.
 
-### Being precise about the two results
+### The two tools deserve different verdicts
 
-The evidence for the two tools is **not** equally strong, and it is worth not overstating:
+Filing them together would be sloppy, and they are not the same case.
 
-- **RTK's +7.6% is a systematic effect** — significant on both cost (p=0.004) and turn count
-  (p=0.03), with an identified mechanism.
-- **CAVEMAN's +11.6% was a single outlier task** that crossed a pricing tier. That is variance, not
-  a finding. The defensible claim for CAVEMAN is only that it saves ~8.5% of the cheapest category,
-  which rounds to nothing — not that it costs more.
+|                    | RTK                                         | CAVEMAN                        |
+| ------------------ | ------------------------------------------- | ------------------------------ |
+| Effect on the bill | **+7.6%**, systematic, mechanism identified | **−0.4%**, real but negligible |
+| Effect on quality  | none                                        | none                           |
+| Verdict            | **actively harmful**                        | **harmless**                   |
+
+RTK makes the agent take more turns, and turns are the expensive unit. CAVEMAN does not — there is
+no turn-count penalty and no mechanism by which it hurts. Its reported +11.6% was a *single outlier
+task* crossing a pricing tier: variance, not a finding.
+
+**So use CAVEMAN if you like terse output.** That is a legitimate reason and it costs nothing. Just
+do not expect it to show up on an invoice.
+
+### How small is 0.4%, and why that number is trustworthy
+
+The two studies cross-check each other. CAVEMAN saves **8.5% of output tokens** (paired A/B) and
+**0.4% of actual spend** (production replay). For both to be true, **output must be about 5% of what
+you pay** — which is exactly what you would predict from a workload dominated by re-sent, cached
+input.
+
+That 5% figure is the useful takeaway, because it bounds *every* output-compression tool that will
+ever be pitched to you. Even a perfect one — 100% of output removed — saves you 5%.
+
+### The actual risk, which is not the tool
+
+Neither tool will hurt you if you understand what it does. The expensive mistake is believing that
+installing one means token optimisation is handled.
+
+Model routing and cache protection are worth 10–50%. A 0.4% skill that *feels* like a solution can
+cost far more than it saves by ending the search. Fix the denominators first, then add the rounding
+errors if you enjoy them.
 
 **Disclosure:** JetBrains sells competing agent tooling and launched a competing context product the
 same month. That is a real interest. What defuses it is not trust — it is that the benchmark is
