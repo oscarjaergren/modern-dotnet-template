@@ -60,6 +60,13 @@ jobs:
       - name: Verify formatting
         run: dotnet format --verify-no-changes
 
+      # lychee runs at the pre-push stage locally, and `prek run --all-files` above only runs the
+      # pre-commit stage — so without this, `git push --no-verify` would skip link checking and
+      # nothing downstream would ever catch a broken link. Invoked through prek so the hook
+      # definition stays the single source of truth.
+      - name: Check links
+        run: prek run lychee --all-files --hook-stage pre-push
+
       # NuGet audit (NU1903, a build error here) covers direct and centrally-pinned packages.
       # This walks the full transitive graph, which audit does not.
       - name: Scan transitive dependencies for advisories

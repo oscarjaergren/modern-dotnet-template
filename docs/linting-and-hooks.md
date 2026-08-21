@@ -68,6 +68,27 @@ The requirement that shaped the configuration:
 - **`--no-verify` cannot ship.** It is not blocked — it is a legitimate escape — but CI runs the
   identical definitions via `prek run --all-files`, so a local bypass only defers the failure.
 
+## The rule that makes pre-push safe
+
+`git push --no-verify` skips pre-push hooks, so a pre-push check is only real if **CI runs the same
+thing**. Note that `prek run --all-files` runs the *pre-commit* stage only — it does not cover
+pre-push hooks.
+
+So every pre-push hook needs a CI counterpart:
+
+| pre-push hook         | Covered in CI by                        |
+| --------------------- | --------------------------------------- |
+| `build`               | `dotnet build`                          |
+| `test`                | `dotnet test`                           |
+| `openapi-drift`       | the `git diff` contract check           |
+| `dotnet-format-check` | `dotnet format --verify-no-changes`     |
+| `lychee`              | `prek run lychee --hook-stage pre-push` |
+
+`lychee` was missed when the hooks were first written — it had no CI equivalent, so a
+`--no-verify` push would have shipped broken links with nothing downstream to catch them. **If you
+add a pre-push hook, add its CI counterpart in the same commit**, or it is advisory rather than
+enforced.
+
 ## Adding a check
 
 Add a block to `.pre-commit-config.yaml`, and pin the tool in `mise.toml` if it is a new binary.
