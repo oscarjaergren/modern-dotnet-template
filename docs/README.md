@@ -5,6 +5,7 @@ Reference material, read on demand. Day-to-day conventions live in
 
 | Read this if you're…                                                         | Page                                                         |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| considering a plugin or proxy that promises token savings                    | [token-saving-tools.md](token-saving-tools.md)               |
 | working with an agent here, or your token bill is too high                   | [ai-workflow.md](ai-workflow.md)                             |
 | writing C# here, or wondering why the code looks like it does                | [code-style.md](code-style.md)                               |
 | a hook blocked your commit, or you're adding a check                         | [linting-and-hooks.md](linting-and-hooks.md)                 |

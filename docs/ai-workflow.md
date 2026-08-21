@@ -47,58 +47,80 @@ tokens.
 lossless** — path-scoped rules, nested instructions and exact tool output can be dropped. Anything
 load-bearing belongs in a file, not in the conversation.
 
-## Evaluated and rejected: output-compression tools
+## Run code-writing agents in worktrees
 
-Two popular tools promise large savings. Both were evaluated and neither is used here.
+The failure this prevents is silent and destructive. Two agents open the same file, each edits its
+own in-memory copy, both write back — **the second write wins and erases the first agent's work**.
+No error, no conflict marker, nothing in the diff to suggest anything was lost.
 
-| Tool                                     | Advertised              | Measured                                                                         |
-| ---------------------------------------- | ----------------------- | -------------------------------------------------------------------------------- |
-| CAVEMAN (terse agent output)             | 65% output-token saving | 8.5% output tokens; the arm cost **11.6% more** overall                          |
-| RTK (compresses shell output via a hook) | 60–90% cost reduction   | **+7.6% more expensive** at low reasoning effort (p=0.004); ±0% at high (p=0.99) |
+Git worktrees fix it structurally: each agent gets its own directory and branch, sharing one git
+history. Nothing to remember, nothing to coordinate.
 
-Two independent analyses, different methods, same conclusion:
+*Claude-specific:* built-in since v2.1.49. Put it in the agent's frontmatter:
 
-- **A paired A/B on SkillsBench** — an independent open benchmark (87 tasks, 24 model-harness
-  configurations, 3 trials each), run by JetBrains. Quality was unaffected in both cases.
-- **A production replay over 614 million tokens and $926 of real spend**, measuring three such tools
-  at once: RTK saved **0.5%** of actual spend, CAVEMAN **0.4%**, all three combined **3.7%**.
+```yaml
+---
+name: my-agent
+isolation: worktree
+---
+```
 
-The replay's conclusion is the line worth keeping:
+**Use it on every subagent that writes code.** It costs nothing and removes a whole class of
+data loss. Read-only agents — like `codebase-locator` — do not need it.
 
-> "The advertised numbers are not exaggerated. Each measures a different thing on a different
-> workload."
+To ask for it in a prompt rather than a config: *"work on this in a separate worktree"*. If your
+agent has no worktree support, `git worktree add ../feature-x -b feature-x` and point it there.
 
-**The vendors are not lying.** RTK really does compress shell output by 60–90%. That compression is
-simply half a percent of the bill.
+Practical ceiling is 4–8 concurrent worktrees per person. Past that you are bottlenecked on
+reviewing the output, not on the agent.
 
-Why, structurally:
+## A settings.json starting point
 
-- They compress the cheapest category (see the cost model above).
-- RTK only intercepts shell commands. An agent's built-in file-read and search tools bypass it
-  entirely, about half of what agents run is uncovered commands like `python3`, and what remains
-  carries under 20% of tool-result characters.
-- Cached re-reads dominate, and on *new* input RTK moved +3.2% (p=0.23 — noise).
-- RTK estimates tokens as characters ÷ 4 and scores itself against a counterfactual the billing
-  system never applies: its scoreboard reported 96 million tokens saved while the invoice went up.
+*Claude-specific.* Every key below is real; the defaults are noted where they matter.
 
-**Disclosure:** JetBrains sells competing agent tooling and launched a competing context product the
-same month. That is a real interest. What defuses it is not trust — it is that the benchmark is
-third-party and open, the methodology and p-values are published, the findings were quality-neutral
-rather than a hatchet job, and an unaffiliated replay using a completely different method reached
-the same place.
+```jsonc
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
 
-**The generalisable lesson, which outlives both tools:** a tool that reports its own savings against
-a counterfactual it invented is not evidence. Only a paired A/B against the invoice is. Apply that
-to the next tool advertising 90%.
+  // Default to a mid-tier model. The top tier is a per-task decision, not a standing one.
+  "model": "sonnet",
 
-## Memory and context plugins: none added
+  // Compaction. Default is on, with a model-tuned window; valid range is 100000-1000000 TOKENS.
+  // Lower = compact sooner = smaller context per turn. See the trade-off below before lowering it.
+  "autoCompactEnabled": true,
+  "autoCompactWindow": 300000,
 
-Agents increasingly ship built-in memory, and this repo's structure already does the job that
-context plugins target. A third-party memory store on top would mean two or three systems that can
-disagree about what is true — the same failure this repo avoids everywhere else.
+  // On by default. The agent keeps its own notes across sessions, which is why this repo adds
+  // no third-party memory plugin.
+  "autoMemoryEnabled": true,
 
-If you adopt one anyway, prefer the one your agent vendor ships, and check it against whatever
-memory the agent already has before assuming it adds anything.
+  // Session files are kept 30 days by default. Shorten it if the repo is sensitive.
+  "cleanupPeriodDays": 30,
+
+  "includeCoAuthoredBy": true
+}
+```
+
+### The compaction trade-off, which is not free
+
+A lower `autoCompactWindow` is usually described as a straight win. It is not, and the reason is the
+same mechanism as everything else on this page: **compaction rewrites the prefix, so it invalidates
+the prompt cache.** The next turn pays full input price for the new context, plus the cost of the
+summarisation call itself, plus whatever detail the summary dropped.
+
+So:
+
+- **Long sessions** — worth it. You stop carrying a huge context on every turn, and the one-off
+  cache reset pays back over the remaining turns.
+- **Short sessions** — a lower window can cost more than it saves. You paid to reset a cache you
+  were about to stop using.
+
+`300000` is a reasonable aggressive setting for long working sessions. Do not treat it as a default
+to copy: it is a lever to tune against how you actually work, and the honest way to tune it is the
+same as everything else here — compare invoices across a week, not a tool's estimate.
+
+Because compaction is lossy, anything load-bearing belongs in a file rather than in the
+conversation. That is the same argument that produced this repo's docs layout.
 
 ## How to verify any of this yourself
 
@@ -108,3 +130,9 @@ Do not trust a tool's own scoreboard, including any claim on this page.
 - Compare **invoices**, not token estimates, across a week with and without a change.
 - If you A/B a tool, keep the task set fixed and run it more than once — the JetBrains numbers moved
   by reasoning effort, and a single outlier task was enough to swing the CAVEMAN result by 11%.
+
+## Before you install a token-saving tool
+
+Two widely recommended ones measurably cost *more* on real agent work, for reasons that follow
+directly from the cost model above. See
+[token-saving-tools.md](token-saving-tools.md) before adopting any of them.
