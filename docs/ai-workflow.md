@@ -3,90 +3,38 @@
 **Read this if:** you are working on this repo with a coding agent, or your token bill is higher
 than you expected.
 
-Written for any agent — Claude Code, Codex, Cursor, Copilot, Gemini CLI. The cost model is a
-property of how frontier models are priced, not of one tool. The few Claude-specific mechanics are
-marked.
+Config-first. The reasoning behind the tool choices is in
+[token-saving-tools.md](token-saving-tools.md); this page is what to actually set.
 
-## The cost model, which is the whole point
+## Where the money goes
 
-Most token-saving advice targets the wrong thing. In agentic coding:
+Measured breakdown of a typical agentic session:
 
-- **Output is a small fraction of the bill.** Agents emit code, diffs and tool calls, not prose.
-- **Input dominates, and most of it is re-sent context.** The whole prefix goes up again every turn.
-- **Cached input bills at roughly a tenth of fresh input.** That discount is the largest one a
-  session gets, and it is automatic.
+| Category                                                                | Share of spend |
+| ----------------------------------------------------------------------- | -------------- |
+| Cached system overhead (instructions, tool definitions, re-sent prefix) | 30–50%         |
+| Tool I/O (file reads, command output)                                   | 30–45%         |
+| Reasoning tokens                                                        | 10–30%         |
+| Visible output                                                          | **1–10%**      |
 
-So compressing what the agent *says* attacks the cheapest category, and compressing individual
-command outputs attacks a slice of the second-cheapest. Neither is where the money is.
+Two consequences that drive everything below: compressing what the agent *says* is capped at ~5%,
+and **MCP tool definitions are re-sent on every turn** — each connected server can add up to
+**18,000 tokens per turn** before you type anything.
 
-## What actually moves the bill, in order
+## settings.json
 
-**1. Model routing — the single biggest lever.** Use a capable mid-tier model by default, the
-cheapest tier for high-volume low-judgement work, and the top tier only for genuinely hard calls.
-Subagents in this repo set `model:` explicitly for that reason.
-
-**2. Protect the cache.** Anything that changes the stable prefix invalidates it and you pay full
-freight for the lot. Keep always-loaded instructions stable; put volatile detail in files that are
-read on demand. The metric to watch is the **cache-read ratio rising while per-turn input stays
-flat** as the conversation grows.
-
-**3. Subagents for fan-out.** A subagent has its own context window and returns only a summary, so
-the main thread never pays for the files it read. Ideal for "search the codebase and tell me where
-X is". **Caveat:** multi-agent *teams* have been measured at roughly 7× a normal session. A scalpel,
-not a default.
-
-**4. Progressive disclosure.** Already the structure here: always-loaded conventions, procedures
-loaded on task match, reference docs pulled in on demand via an index. See
-[documentation-approach.md](documentation-approach.md).
-
-**5. Batch related work.** Ten turns that each re-send 4k of shared context spend 40k before any new
-work happens. Grouping related changes into one prompt is a minute of planning for thousands of
-tokens.
-
-**6. Session hygiene.** Start a fresh session for unrelated work. Note that **compaction is not
-lossless** — path-scoped rules, nested instructions and exact tool output can be dropped. Anything
-load-bearing belongs in a file, not in the conversation.
-
-## Run code-writing agents in worktrees
-
-The failure this prevents is silent and destructive. Two agents open the same file, each edits its
-own in-memory copy, both write back — **the second write wins and erases the first agent's work**.
-No error, no conflict marker, nothing in the diff to suggest anything was lost.
-
-Git worktrees fix it structurally: each agent gets its own directory and branch, sharing one git
-history. Nothing to remember, nothing to coordinate.
-
-*Claude-specific:* built-in since v2.1.49. Put it in the agent's frontmatter:
-
-```yaml
----
-name: my-agent
-isolation: worktree
----
-```
-
-**Use it on every subagent that writes code.** It costs nothing and removes a whole class of
-data loss. Read-only agents — like `codebase-locator` — do not need it.
-
-To ask for it in a prompt rather than a config: *"work on this in a separate worktree"*. If your
-agent has no worktree support, `git worktree add ../feature-x -b feature-x` and point it there.
-
-Practical ceiling is 4–8 concurrent worktrees per person. Past that you are bottlenecked on
-reviewing the output, not on the agent.
-
-## A settings.json starting point
-
-*Claude-specific.* Every key below is real; the defaults are noted where they matter.
+*Claude-specific.* Every key verified against the settings reference.
 
 ```jsonc
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
 
-  // Default to a mid-tier model. The top tier is a per-task decision, not a standing one.
+  // Mid-tier default. The top tier becomes a per-task decision, not a standing cost.
   "model": "sonnet",
 
-  // Compaction. Default is on, with a model-tuned window; valid range is 100000-1000000 TOKENS.
-  // Lower = compact sooner = smaller context per turn. See the trade-off below before lowering it.
+  // Range is 100000-1000000 TOKENS. Default is model-tuned and fires around 93% capacity,
+  // and each compaction pass itself costs 100-200k tokens. Compacting earlier and more often
+  // trades those passes against carrying a large prefix — see the trade-off below.
   "autoCompactEnabled": true,
   "autoCompactWindow": 300000,
 
@@ -94,46 +42,121 @@ reviewing the output, not on the agent.
   // no third-party memory plugin.
   "autoMemoryEnabled": true,
 
-  // Session files are kept 30 days by default. Shorten it if the repo is sensitive.
   "cleanupPeriodDays": 30,
+  "includeCoAuthoredBy": true,
 
-  "includeCoAuthoredBy": true
+  "env": {
+    // Caps extended thinking. Reasoning is 10-30% of spend and is easy to overspend on
+    // mechanical work.
+    "MAX_THINKING_TOKENS": "8000"
+  }
 }
 ```
 
-### The compaction trade-off, which is not free
+### The compaction trade-off
 
-A lower `autoCompactWindow` is usually described as a straight win. It is not, and the reason is the
-same mechanism as everything else on this page: **compaction rewrites the prefix, so it invalidates
-the prompt cache.** The next turn pays full input price for the new context, plus the cost of the
-summarisation call itself, plus whatever detail the summary dropped.
+Lower `autoCompactWindow` is usually sold as a straight win. It is not: **compaction rewrites the
+prefix, so it invalidates the prompt cache**, and the pass itself costs 100–200k tokens. Long
+sessions win — you stop carrying a huge prefix every turn. Short sessions lose — you paid to reset a
+cache you were about to stop using.
 
-So:
+Compacting *deliberately* at 60–70% beats letting auto-compaction fire at 93%, because you choose
+the moment and you know what was in context.
 
-- **Long sessions** — worth it. You stop carrying a huge context on every turn, and the one-off
-  cache reset pays back over the remaining turns.
-- **Short sessions** — a lower window can cost more than it saves. You paid to reset a cache you
-  were about to stop using.
+## `.claudeignore`
 
-`300000` is a reasonable aggressive setting for long working sessions. Do not treat it as a default
-to copy: it is a lever to tune against how you actually work, and the honest way to tune it is the
-same as everything else here — compare invoices across a week, not a tool's estimate.
+Keeps generated and vendored files out of reads and searches entirely — the cheapest possible fix,
+since a file never read costs nothing.
 
-Because compaction is lossy, anything load-bearing belongs in a file rather than in the
-conversation. That is the same argument that produced this repo's docs layout.
+```
+artifacts/
+bin/
+obj/
+*.user
+*.log
+```
 
-## How to verify any of this yourself
+This repo needs little else: `UseArtifactsOutput` already puts every build output under
+`artifacts/`, so one line covers what would otherwise be dozens of `bin/` and `obj/` folders.
 
-Do not trust a tool's own scoreboard, including any claim on this page.
+## Model routing: the actual agent file
 
-- Watch the **cache-read ratio** and per-turn input tokens across a long session.
-- Compare **invoices**, not token estimates, across a week with and without a change.
-- If you A/B a tool, keep the task set fixed and run it more than once — the JetBrains numbers moved
-  by reasoning effort, and a single outlier task was enough to swing the CAVEMAN result by 11%.
+The largest single lever, and it is one line of frontmatter. `.claude/agents/codebase-locator.md`
+in this repo is the worked example — a "where is X?" agent on the cheapest tier:
 
-## Before you install a token-saving tool
+```yaml
+---
+name: codebase-locator
+description: Finds where things live in this repo. Use for "where is X?" questions.
+tools: Read, Grep, Glob
+model: haiku
+isolation: worktree   # only needed for agents that WRITE
+---
+```
 
-Ask **which layer it works at** — that bounds the return before you install anything. A tool
-compressing the agent's prose is capped at ~5% of your bill; one compressing re-sent context is not.
-Measured results for the main options, including one worth trying and one to avoid, are in
+Two savings at once: **`model: haiku`** because locating needs no judgement, and **its own context
+window** so the main thread never pays for the files it opened — it receives only the summary.
+
+The rule: match the tier to the judgement required. Locating, inventorying and mechanical edits are
+Haiku work. Reviewing is Sonnet work. Architecture is worth the top tier.
+
+## Worktrees, for anything that writes
+
+Two agents open the same file, both write back, **the second write silently erases the first**. No
+error, nothing in the diff.
+
+```yaml
+isolation: worktree
+```
+
+Put it on every code-writing subagent — it costs nothing. Read-only agents do not need it. Without
+built-in support: `git worktree add ../feature-x -b feature-x`. Practical ceiling is 4–8 concurrent;
+past that you are bottlenecked on reviewing output.
+
+## Trim MCP servers
+
+Each connected MCP server injects its tool definitions into **every turn** — up to 18,000 tokens
+each. Three idle servers can cost more per turn than the file you are editing.
+
+Disconnect the ones you are not using this session. This is the highest-value thing on the page that
+costs nothing and takes ten seconds.
+
+## Commands worth the muscle memory
+
+| Command    | When                                                          |
+| ---------- | ------------------------------------------------------------- |
+| `/clear`   | Switching to unrelated work. Cheapest possible reset.         |
+| `/compact` | Deliberately, at 60–70% context, rather than waiting for 93%. |
+| `/cost`    | End of a session — token count and estimated spend.           |
+| `/model`   | Drop to a cheaper tier for mechanical stretches.              |
+| `/context` | See what is actually occupying the window.                    |
+
+Plan mode before a complex task is a real saving, not ceremony: planning first avoids the expensive
+failure mode of an agent exploring, guessing wrong, and re-reading everything.
+
+## Measure before optimising
+
+Do not tune against estimates.
+
+- `/cost` per session; `console.anthropic.com` → Usage for history.
+- Run with `--verbose` for one full working day before changing anything.
+- Watch the **cache-read ratio** rise while per-turn input stays flat as the conversation grows.
+  That is what a healthy long session looks like.
+- A statusline context gauge (`claude-hud` and similar) shows live token count and cost.
+
+## What this repo does structurally
+
+Not settings — architecture, and it is why the agent workflow here is cheap by default:
+
+- **Layered docs.** `AGENTS.md` always loaded; skills on task match; `docs/` on demand via an index.
+  See [documentation-approach.md](documentation-approach.md).
+- **Self-contained pages**, so one read finishes a task instead of three.
+- **Fix at edit time, verify at commit time**, so hooks rarely reject and cost a round trip. See
+  [linting-and-hooks.md](linting-and-hooks.md).
+- **Everything build-generated under `artifacts/`**, so it is trivially ignorable.
+
+## Before installing a token-saving tool
+
+Ask **which layer it works at** — that bounds the return before you install anything. Measured
+results, including one worth trying and one to avoid, are in
 [token-saving-tools.md](token-saving-tools.md).
