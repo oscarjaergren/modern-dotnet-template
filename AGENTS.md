@@ -22,7 +22,6 @@ Everything runs from the repo root.
 | All tests        | `dotnet test`                                                                   |
 | One project      | `dotnet test --project tests/Api.UnitTests/Api.UnitTests.csproj`                |
 | Format check     | `dotnet format --verify-no-changes`                                             |
-| Fix formatting   | `dotnet format`                                                                 |
 | Run locally      | `aspire run`                                                                    |
 | AOT publish      | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64`                     |
 | Container        | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer` |
@@ -163,6 +162,7 @@ matches, and expect it to answer the question on its own without needing a secon
 
 | If you're…                                                                   | Read                                                                   |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| writing C# here, or wondering why the code looks like it does                | [docs/code-style.md](docs/code-style.md)                               |
 | a hook blocked your commit, or you're adding a check                         | [docs/linting-and-hooks.md](docs/linting-and-hooks.md)                 |
 | defining a request, response, value object, or anything that holds data      | [docs/data-models.md](docs/data-models.md)                             |
 | an operation can fail, or you're about to `throw`                            | [docs/errors-and-failures.md](docs/errors-and-failures.md)             |
