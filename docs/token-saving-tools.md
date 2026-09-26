@@ -69,24 +69,50 @@ rewrite of compound `find` predicates. The penalty vanishes at high reasoning ef
 tell: a stronger model infers what compression removed, a weaker one asks again. RTK is a local
 binary consuming no tokens itself — every extra penny came from the agent behaving differently.
 
-## The wider ecosystem
+## The wider ecosystem, with verdicts
 
-Compression is only one layer. The tools worth knowing, by what they actually do:
+Compression is one layer of several. Every tool below was checked to exist and its licence read from
+the repository, not from a blog post.
 
-| Tool                   | Layer                     | What it does                                                                          |
-| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------- |
-| Headroom               | compression (context)     | API-layer proxy, content-typed compressors, preserves cache prefix                    |
-| Context Mode           | compression (tool output) | Sandboxes large outputs — test logs, DOM snapshots, MCP payloads — into local indexes |
-| RTK                    | compression (shell)       | Rewrites shell commands via a hook                                                    |
-| CAVEMAN                | compression (output)      | Strips filler from the agent's prose                                                  |
-| Token Savior           | **retrieval**             | Symbol summaries before full files; progressive code reading via MCP                  |
-| claude-context         | **retrieval**             | Repository embeddings, semantic search                                                |
-| code-review-graph      | code graph                | Tree-sitter structure map; dependency and blast-radius questions                      |
-| memsearch / claude-mem | memory                    | Durable decisions across sessions                                                     |
+**How to read the verdict column.** Three of these were measured against real spend — the replay
+above — and those verdicts are evidence. The rest are judged on **layer**, which bounds the return
+before you install anything. Where a tool's own claim is quoted, it is quoted to be distrusted.
 
-The retrieval tools are structurally the most interesting and the least measured. Not sending a file
-beats compressing it, and a symbol summary instead of a 600-line file is a bigger win than any
-compressor can offer on that file. If you experiment with one thing here, make it a retrieval tool.
+Licence is a footnote, not a verdict — two here are not OSI-approved, and only one of those actually
+stops a company using it. It is called out in the row where it bites.
+
+| Tool                          | Layer               | Verdict               | Why                                                                                                                                                                        |
+| ----------------------------- | ------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| claude-hud                    | measurement         | **Use**               | MIT, free, and the only thing here that shows the window filling while it happens. Measurement before optimisation.                                                        |
+| Token Savior                  | **retrieval**       | **Try first**         | The right layer: symbol summaries instead of whole files. MIT. Its claimed saving is quoted as 43%, 80% and 97% by three different sources — ignore all three and measure. |
+| Headroom                      | context compression | **Try**               | Best measured return of anything here, and that return is 2.8%. Apache-2.0, works across agents. Prefer its library or MCP mode — see the proxy trap below.                |
+| Context Mode                  | tool output         | **Try**               | Right layer — sandboxes test logs and MCP payloads into a local index instead of the window. Elastic v2: internal use at work is fine, reselling it as a service is not.   |
+| claude-context                | **retrieval**       | **Monorepos only**    | BM25 plus embeddings over the repo. MIT, but needs a paid embedding provider, so it moves cost rather than removing it. Nothing to index at this repo's size.              |
+| code-review-graph             | code graph          | **Not at this size**  | Tree-sitter blast-radius map, MIT. Break-even is around 100 files; the reported 8–49× is on monorepos, and the overhead exceeds the benefit below that.                    |
+| CAVEMAN                       | agent output        | **Optional**          | 0.4% of spend. Harmless, pleasant to read, invisible on an invoice. Its "65%" is a share of output tokens, and output is ~5% of the bill.                                  |
+| token-optimizer (alexgreensh) | diagnostics         | **Personal use only** | PolyForm Noncommercial genuinely blocks company use, not just resale. `/context` and a statusline gauge answer the same question for free.                                 |
+| claude-code-router            | model routing       | **Skip**              | The saving is real, but `model:` frontmatter and `/model` already do it natively — and doing it through a proxy costs you tool-definition deferral.                        |
+| claude-mem / memsearch        | memory              | **Skip**              | `autoMemoryEnabled` is on by default and covers this. A second memory store is a second thing that can disagree with the first.                                            |
+| token-optimizer-mcp           | caching             | **Skip**              | An MCP server whose purpose is saving tokens still injects its own tool definitions to do it. Verify it nets out before believing the headline.                            |
+| CLAUDE.md "terseness" packs   | agent output        | **Skip**              | Capped at ~5% by arithmetic, whatever the README says. Keeping `AGENTS.md` short is the same idea for free.                                                                |
+| RTK                           | shell output        | **Avoid**             | The only measured *negative*. It compresses 60–90% and still costs more, because it drives +13.8% more turns (p=0.03) and a turn re-sends everything.                      |
+
+The three measured verdicts are argued in full under [Verdicts](#verdicts) above.
+
+### The proxy trap
+
+Claude Code defers MCP tool definitions and loads them on demand — tool search, on by default. That
+is the largest single lever on MCP overhead, and **it switches itself off when `ANTHROPIC_BASE_URL`
+points at a non-first-party host**, because most proxies do not forward `tool_reference` blocks.
+
+So routing the agent through a local proxy re-inflates every deferred tool definition onto every
+turn. Forcing it back with `ENABLE_TOOL_SEARCH=true` does not help: the requests then fail against a
+proxy that cannot carry those blocks. Anything in the table that works as a proxy — Headroom in
+proxy mode, claude-code-router — is making that trade, whether or not its README mentions it.
+
+With no MCP servers connected this costs nothing. With several connected it can exceed the
+compression that was the reason for installing the proxy. Use the library or MCP integration instead
+of the proxy where a tool offers one, and measure with the servers you actually run.
 
 ## Nothing here is installed in this template
 
