@@ -4,20 +4,16 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
 
   "features": {
-    // Version comes from global.json so the container and CI agree.
+    // "10.0" installs the latest 10.0 SDK, which satisfies the global.json floor.
     "ghcr.io/devcontainers/features/dotnet:2": {
       "version": "10.0"
     },
-    // Needed for the container publish gate: `dotnet publish /t:PublishContainer`
-    // loads the image into a local daemon. Not needed for `aspire run` today, but adding a
-    // database resource makes it required — see docs/adding-a-database.md.
+    // For the container publish gate, and for aspire run once a database is added.
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
 
-  // Native AOT shells out to clang and the system linker. Without these, `dotnet publish`
-  // fails at the "Generating native code" step with a confusing linker error.
-  // The devcontainer owns the OS layer (system packages, docker); mise.toml owns tool versions.
-  // Keeping them separate means the linter versions are identical inside and outside a container.
+  // clang and zlib for Native AOT. The container owns OS packages; mise.toml owns tool
+  // versions.
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev && curl -fsSL https://mise.run | sh && ~/.local/bin/mise install && ~/.local/bin/mise exec -- prek install && dotnet tool restore && dotnet restore",
 
   "customizations": {

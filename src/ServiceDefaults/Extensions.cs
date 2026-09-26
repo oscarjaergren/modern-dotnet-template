@@ -15,8 +15,7 @@ namespace Microsoft.Extensions.Hosting;
 /// service discovery, resilience, health checks, and OpenTelemetry.
 /// </summary>
 /// <remarks>
-/// Keep this file to those concerns only. Shared models or helpers belong in a normal class
-/// library — this project is referenced by everything, so anything added here is added everywhere.
+/// Only those concerns: every project references this one, so anything added here goes everywhere.
 /// </remarks>
 public static class Extensions
 {
@@ -60,10 +59,8 @@ public static class Extensions
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>
-                        // Health probes would otherwise dominate the traces.
-                        // OrdinalIgnoreCase, not the default: URL paths are not culture-sensitive
-                        // text, and with InvariantGlobalization=true a culture-aware comparison
-                        // behaves differently rather than failing. Flagged by MA0074.
+                        // Keep probes out of the traces. Ordinal: paths are not culture-sensitive
+                        // text (MA0074).
                         options.Filter = context =>
                             !context.Request.Path.StartsWithSegments(
                                 HealthEndpointPath, StringComparison.OrdinalIgnoreCase)
@@ -100,27 +97,14 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Maps <c>/health</c> (readiness) and <c>/alive</c> (liveness), in every environment.
+    /// Maps <c>/health</c> (readiness) and <c>/alive</c> (liveness) in every environment, so the
+    /// published image can be probed.
     /// </summary>
     /// <remarks>
-    /// The Aspire template maps these in Development only, on the grounds that health detail leaks
-    /// information about your dependencies. The leak is real but it comes from the *response body*,
-    /// not from the route: a detailed writer names every check and its status. So this template
-    /// keeps the routes and pins the writer instead.
-    /// <para>
-    /// <see cref="WriteStatusOnly"/> writes the aggregate status
-    /// and nothing else — <c>Healthy</c> or <c>Unhealthy</c>, no check names, no exception text. It
-    /// matches the framework default, but the framework's own writer is internal, so it is spelled
-    /// out here — which also makes swapping in a detailed writer a visible edit rather than an
-    /// accident.
-    /// </para>
-    /// <para>
-    /// The trade-off that remains: an unauthenticated caller can tell that the service is up. That
-    /// is the same thing every load balancer already knows, and it is the price of a container that
-    /// Kubernetes and Container Apps can actually probe. If you add a writer that reports per-check
-    /// detail, put it behind authentication or a separate port. See
-    /// <c>docs/containers-and-deployment.md</c> and https://aka.ms/aspire/healthchecks.
-    /// </para>
+    /// The Aspire template maps these in Development only, because a detailed response names every
+    /// check. The leak is in the body, not the route, so the writer is pinned to status only. A
+    /// detailed writer belongs behind authentication or a separate port. See
+    /// <c>docs/containers-and-deployment.md</c>.
     /// </remarks>
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
@@ -138,9 +122,7 @@ public static class Extensions
         return app;
     }
 
-    // The aggregate status and nothing else. Deliberately not the detailed JSON writer: that one
-    // names every registered check, which is exactly the information a public probe should not
-    // hand out.
+    // "Healthy" or "Unhealthy", no check names. The framework's equivalent writer is internal.
     private static Task WriteStatusOnly(HttpContext context, HealthReport report)
     {
         context.Response.ContentType = "text/plain";

@@ -1,7 +1,7 @@
 # Docs
 
-Reference material, read on demand. Day-to-day conventions live in
-[`AGENTS.md`](../AGENTS.md) — that is the always-loaded file, and it carries the same index as below.
+Read on demand. The always-loaded conventions are in [`AGENTS.md`](../AGENTS.md), which carries the
+same index.
 
 | Read this if you're…                                                         | Page                                                         |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -21,22 +21,10 @@ Reference material, read on demand. Day-to-day conventions live in
 
 ## How these are written
 
-Pages are **living** — corrected in place, never superseded and archived. They are named by the
-**task that makes you open them**, each **self-contained** enough to finish that task without
-opening a second one, and short enough to be read whole. Some content is therefore repeated across
-pages on purpose: a missed cross-reference costs more than a duplicated paragraph.
+Each page is named for the task that sends you to it, finishes that task on its own, and is
+corrected in place rather than superseded. Repetition across pages is accepted: a missed
+cross-reference costs more than a repeated paragraph. A page that stops being true is rewritten or
+deleted. There are no ADRs; [documentation-approach.md](documentation-approach.md) says why.
 
-Deleting is part of maintaining them. A page that stops being true gets rewritten or removed, not
-left beside its replacement.
-
-There are no architecture decision records. ADRs are immutable by design, so a decision log only
-grows and answering "what is true now?" means replaying it — bad for a reader, worse for an agent
-retrieving one page at a time.
-[documentation-approach.md](documentation-approach.md) lists the full requirements this was chosen
-against, and the cost: a stale ADR is still correct, a stale living document is just wrong.
-
-Measured figures are allowed, but each one needs an answer to "what keeps this true?". A number CI
-asserts is fine — the image size in the README is a gate, not a claim. A number cited from an
-outside study is fine, dated and attributed. A number typed in once because it was true that
-afternoon is not, because nothing will tell you when it stops being true. History comes from
-`git log`.
+A measured figure needs an answer to "what keeps this true?": a CI assertion, or a dated source. A
+number typed in once is not allowed, because nothing will say when it stops being true.

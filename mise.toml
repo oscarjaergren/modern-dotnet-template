@@ -1,15 +1,7 @@
-# Pinned versions for every linter the git hooks run.
+# Pinned versions of every tool the git hooks run. The devcontainer and CI install from this
+# file too, so every machine runs identical binaries. The .NET SDK is pinned by global.json.
 #
-# One source of truth: the devcontainer calls `mise install` rather than listing tools itself, and
-# CI installs from this file too, so a laptop, a devcontainer and a CI runner all get identical
-# binaries. That matters because the alternative — "install these nine tools yourself" — is the
-# single most common reason a hook silently does nothing.
-#
-# The .NET SDK is deliberately NOT managed here. global.json already pins it, and two mechanisms
-# claiming the same responsibility is how they drift apart.
-#
-# Bootstrap:  mise install && prek install
-# Update:     mise outdated  (Renovate also raises PRs against this file)
+# Setup: mise install && prek install. Updates: Renovate, or `mise outdated`.
 
 [tools]
 prek = "0.4.14"                  # git hook manager

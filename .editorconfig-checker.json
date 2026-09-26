@@ -1,17 +1,8 @@
 {
   "$comment": [
-    "editorconfig-checker config. It covers the file types dotnet format never sees:",
-    "markdown, json, yaml, shell.",
-    "",
-    "IndentSize is disabled deliberately, not because it is noisy. The check counts leading",
-    "spaces and requires a multiple of indent_size, which is wrong for aligned continuation",
-    "lines that are idiomatic in every language here: a C# expression continued under an",
-    "operator, an XML comment whose second line aligns under the first, and a markdown list",
-    "item continued at 3 spaces to align under '1. '. dotnet format already owns C# indentation",
-    "and accepts all of these.",
-    "",
-    "The remaining checks - final newline, trailing whitespace, line endings, charset - are the",
-    "high-signal ones and stay on."
+    "Covers the files dotnet format never sees: markdown, json, yaml, shell.",
+    "IndentSize is off: it rejects aligned continuation lines (C# expressions, XML doc comments,",
+    "markdown list items) that dotnet format accepts."
   ],
   "Exclude": [
     "^artifacts/",

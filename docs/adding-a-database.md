@@ -1,57 +1,38 @@
 # Adding a database
 
-**Read this if:** you are adding EF Core, Dapper, Marten, Postgres, or any other persistence.
+**Read this if:** you are adding EF Core, Dapper, Marten, Postgres, or any other persistence. This
+page is self-contained.
 
-This page is self-contained. You should not need to open another one to finish the job.
+## Why there isn't one
 
-## Why there isn't one already
+Persistence is the most opinionated and most entangled choice a service makes: migrations,
+transactions, test strategy and AOT all follow from it. So there is no ORM, database or repository
+abstraction to rip out. Having no data layer is also what keeps the Native AOT gate cheap.
 
-Persistence is the most opinionated choice in a service and the one most likely to differ between
-projects. It is also the most entangled — migrations, transactions, testing strategy, and Native AOT
-compatibility all follow from it. A template that picks for you is only useful to people who agree
-with the pick.
+## Decide about AOT first
 
-So there is no ORM, no database, no repository abstraction, and no `IUnitOfWork`. There is nothing
-to rip out and no abstraction to fight.
+**EF Core and Native AOT are either/or.** Microsoft describes EF Core's AOT support as experimental
+and unsuited to production, and it rules out dynamic query composition.
 
-It also has a load-bearing side effect: with no data layer, Native AOT is trivially satisfiable,
-which is what makes the AOT gate viable at all.
+- **Keep AOT:** use persistence without runtime code generation, usually Dapper with
+  source-generated mapping.
+- **Drop AOT:** a supported exit, and the right call for most teams adding EF Core. Do it in its own
+  commit:
+  1. `src/Api/Api.csproj`: delete `<PublishAot>true</PublishAot>`.
+  2. `src/Api/Api.csproj`: optionally delete `<InvariantGlobalization>true</InvariantGlobalization>`.
+  3. `.github/workflows/ci.yml`: delete the `aot-container` job, or keep the container and drop the
+     AOT expectations.
+  4. `.editorconfig`: optionally relax `IL2026`, `IL3050`, `IL2091`.
 
-## The decision you have to make first
+  Keep `CopyOutputSymbolsToPublishDirectory=false`. Nothing else depends on AOT.
 
-**EF Core and Native AOT are an either/or.** Microsoft's own documentation describes EF Core's AOT
-support as highly experimental and unsuited to production, and forbids dynamic query composition.
+For EF Core migrations, run `dotnet-ef` with `dotnet tool exec` rather than adding it to
+`.config/dotnet-tools.json`: a second tool there breaks `dotnet tool restore` on every fresh machine
+(see the trap in `AGENTS.md`).
 
-So before writing any code, pick one:
+## Wiring it through Aspire
 
-- **Keep AOT** → use a persistence approach that works without runtime code generation, or accept
-  significant constraints. Dapper with source-generated mapping is the usual answer.
-- **Drop AOT** → follow the removal steps below. This is a supported exit, not a failure. It is
-  documented precisely because it is the most likely reason someone reverses a default here.
-
-Most teams adding EF Core should drop AOT. Do it deliberately and in its own commit.
-
-## Removing the AOT gate
-
-Four changes, all small:
-
-1. `src/Api/Api.csproj` — delete `<PublishAot>true</PublishAot>`.
-2. `src/Api/Api.csproj` — optionally delete `<InvariantGlobalization>true</InvariantGlobalization>`
-   if you need culture-aware formatting.
-3. `.github/workflows/ci.yml` — delete the `aot-container` job, or keep the container publish and
-   drop only the AOT expectations.
-4. `.editorconfig` — optionally relax `IL2026` / `IL3050` / `IL2091` from `error`.
-
-Keep `<CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>`. It is still
-correct without AOT and keeps debug symbols out of the runtime image.
-
-Nothing else depends on AOT. Slices, gates, tests, and container publishing all work unchanged.
-`docs/native-aot.md` covers the constraints in more detail if you would rather keep the gate.
-
-## Wiring the database through Aspire
-
-Aspire is already orchestrating the app, so a containerised database is one line in
-`src/AppHost/AppHost.cs`:
+One line in `src/AppHost/AppHost.cs` gives you a containerised database:
 
 ```csharp
 var db = builder.AddPostgres("postgres").AddDatabase("appdb");
@@ -62,35 +43,19 @@ builder.AddProject<Projects.Api>("api")
     .WithHttpHealthCheck("/health");
 ```
 
-Add the matching client integration package to `src/Api` (for example `Aspire.Npgsql`) and register
-it with `builder.AddNpgsqlDataSource("appdb")`. Aspire injects the connection string; do not add one
-to `appsettings.json`.
+Add the client integration to `src/Api` (for example `Aspire.Npgsql`, with its version in
+`Directory.Packages.props`) and call `builder.AddNpgsqlDataSource("appdb")`. Aspire injects the
+connection string; don't put one in `appsettings.json`.
 
-Remember to add the package version to `Directory.Packages.props` — this repo uses Central Package
-Management, so `PackageReference` entries carry no `Version` attribute.
+## What changes for tests and CI
 
-## What this changes about your test and CI setup
-
-This is the part people miss.
-
-Right now the AppHost has only a project resource, so `aspire run` and the integration tests need
-**no container runtime**. The moment you add a database resource, both need Docker or Podman.
-
-- Local: a container runtime must be running before `aspire run` or `dotnet test`.
-- CI: GitHub's `ubuntu-latest` runners have Docker preinstalled, so `.github/workflows/ci.yml` keeps
-  working — but the `build-and-test` job gets slower and can now fail for infrastructure reasons.
-- Integration tests will need to wait for the database to be healthy. `ApiFixture` already calls
-  `WaitForResourceHealthyAsync("api")`; add the database resource to that wait.
-
-Consider whether the integration tests should get a fresh database per run. Aspire gives you a
-throwaway container, which is usually better than a shared instance and per-test cleanup.
+Today `aspire run` and the integration tests need no container runtime. A database resource changes
+that: Docker or Podman must be running locally, and CI gets slower (GitHub's `ubuntu-latest` has
+Docker, so it keeps working). Add the database to the health wait in `ApiFixture`, and prefer
+Aspire's throwaway container per run over a shared instance.
 
 ## Where the code goes
 
-Persistence belongs to the slice that uses it. Do not create a `Repositories/` folder — that is the
-layered layout this template deliberately avoids, and `Api.ArchitectureTests` will not stop you but
-the structure will fight you.
-
-If several slices genuinely share persistence concerns (a `DbContext`, say), put it in a namespace
-**outside** `Api.Features`, because slices may not reference each other. A `src/Api/Persistence/`
-folder is a reasonable home.
+Persistence belongs to the slice that uses it; don't create a `Repositories/` folder. Anything
+several slices share, such as a `DbContext`, goes outside `Api.Features`, because slices may not
+reference each other. `src/Api/Persistence/` is a reasonable home.

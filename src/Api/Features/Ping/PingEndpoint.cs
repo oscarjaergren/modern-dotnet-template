@@ -3,9 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace Api.Features.Ping;
 
 /// <summary>
-/// The simplest possible slice. It exists to prove the wiring — host, routing, JSON
-/// source-generation, OpenAPI, the container, and CI — end to end. Delete it once your
-/// own slices do that job.
+/// The simplest slice: proves routing, JSON, OpenAPI and the container end to end. Delete it once
+/// real slices do that.
 /// </summary>
 internal static class PingEndpoint
 {

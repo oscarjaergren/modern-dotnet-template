@@ -1,39 +1,26 @@
 # AGENTS.md
 
-Instructions for coding agents working in this repository. This file is canonical; `CLAUDE.md`
-imports it. If you change conventions, change them here.
+Canonical instructions for coding agents. `CLAUDE.md` imports this file; change conventions here.
 
-## What this repo is
-
-A starter template for .NET services: .NET 10, minimal APIs, vertical slices, Aspire for
-orchestration, Native AOT, and strict build gates. There is **no domain, no data layer, and no
-dispatch framework** — those are the consumer's decisions, deliberately left open.
-
-The two sample slices (`Ping`, `Greetings`) exist to demonstrate conventions and prove the pipeline.
-**They are meant to be deleted** once real slices exist.
+A .NET 10 service template: minimal APIs in vertical slices, Aspire, Native AOT, strict build gates.
+No domain, data layer or dispatch framework, on purpose. The `Ping` and `Greetings` slices
+demonstrate conventions and are **meant to be deleted**.
 
 ## Commands
 
-Everything runs from the repo root.
+Run from the repo root.
 
 | Task             | Command                                                                         |
 | ---------------- | ------------------------------------------------------------------------------- |
-| Build            | `dotnet build`                                                                  |
-| All tests        | `dotnet test`                                                                   |
-| One project      | `dotnet test --project tests/Api.UnitTests/Api.UnitTests.csproj`                |
-| Format check     | `dotnet format --verify-no-changes`                                             |
-| Run locally      | `aspire run`                                                                    |
-| AOT publish      | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64`                     |
-| Container        | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer` |
+| Build            | `dotnet build` (also regenerates `src/Api/openapi.json`; commit it)             |
+| Test             | `dotnet test`, or `dotnet test --project <csproj>` (never `dotnet test <path>`) |
 | Coverage         | `dotnet test -- --coverage --coverage-output-format cobertura`                  |
-| Lint everything  | `prek run --all-files`                                                          |
-| Lint one check   | `prek run <hook-id> --all-files`                                                |
-| Fix formatting   | `scripts/format.sh`                                                             |
+| Format           | `scripts/format.sh`; check with `dotnet format --verify-no-changes`             |
+| Lint             | `prek run --all-files`, or `prek run <hook-id> --all-files`                     |
+| Run              | `aspire run`                                                                    |
+| AOT publish      | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64`                     |
+| Container        | the AOT publish plus `/t:PublishContainer`                                      |
 | First-time setup | `mise install && prek install`                                                  |
-
-Note `dotnet test --project <path>`, not `dotnet test <path>` — this repo uses the
-Microsoft.Testing.Platform runner (opted into via `global.json`), where the old positional form
-is not valid.
 
 ## Layout
 
@@ -41,153 +28,76 @@ is not valid.
 src/Api/Features/<Slice>/     one folder per slice; slices never reference each other
 src/Api/Program.cs            one Map* call per slice, no assembly scanning
 src/ServiceDefaults/          OTel, health checks, resilience, service discovery
-src/AppHost/                  Aspire orchestration; dev-time only, never deployed
-tests/Api.UnitTests/          mirrors src/Api/Features/ exactly
-tests/Api.IntegrationTests/   real app over HTTP via Aspire.Hosting.Testing
+src/AppHost/                  Aspire orchestration, dev-time only
+tests/Api.UnitTests/          mirrors src/Api/Features/
+tests/Api.IntegrationTests/   real app over HTTP via Aspire
 tests/Api.ArchitectureTests/  enforces slice isolation
-artifacts/                    ALL build output (UseArtifactsOutput) — gitignored, safe to delete
+artifacts/                    all build output; no bin/ or obj/ beside source
 ```
-
-There are no `bin/` or `obj/` folders beside the source. `artifacts/bin/<Project>/<pivot>/` and
-`artifacts/publish/<Project>/<pivot>/` are the equivalents, where pivot is e.g. `release_linux-x64`.
 
 ## Adding a slice
 
-1. Create `src/Api/Features/<Slice>/`.
-2. Add an endpoint class with a single `internal static IEndpointRouteBuilder Map<Slice>(this IEndpointRouteBuilder app)`.
-3. Add request/response records — **`public`**, see the trap below.
-4. Register the types in `src/Api/ApiJsonSerializerContext.cs`.
-5. Add one line to `Program.cs`: `app.Map<Slice>();`.
-6. Add unit tests under `tests/Api.UnitTests/Features/<Slice>/`.
-7. Add integration tests under `tests/Api.IntegrationTests/Features/<Slice>/`.
-8. Run `dotnet build` — this regenerates `src/Api/openapi.json`. Commit it.
+Copy `Greetings`. Folder under `Features/`; one `Map<Slice>` extension method; `public sealed
+record` request/response types; register them in `ApiJsonSerializerContext.cs`; one
+`app.Map<Slice>()` line in `Program.cs`; unit and integration tests in the mirrored folders; build
+and commit the `openapi.json` diff. Claude Code has this as the `/add-slice` skill.
 
-`Greetings` is the reference implementation. Copy its shape.
+## Rules
 
-## Rules that are enforced, not suggested
+- **Slices never reference each other.** Enforced by `Api.ArchitectureTests`. Shared code moves out
+  of `Features/`. [code-organisation.md](docs/code-organisation.md)
+- **Data is a `record`**: `public sealed`, `init`, `required`. Behaviour stays in classes.
+  [data-models.md](docs/data-models.md)
+- **Expected failures are returned, not thrown**, as `Results<...>` so they appear in `openapi.json`.
+  `CA1031` is an error. [errors-and-failures.md](docs/errors-and-failures.md)
+- **Warnings are errors**, including NuGet audit. Never weaken a gate to pass a build.
+  [build-gates.md](docs/build-gates.md)
+- **Native AOT**: no unreferenced reflection, no `Reflection.Emit`, source-generated JSON only,
+  `InvariantGlobalization`. Never suppress `IL2026`/`IL3050`. [native-aot.md](docs/native-aot.md)
+- **Tests**: xUnit v3 built-in assertions only; names are sentences; integration tests assert the
+  wire format (`JsonDocument`) and cover failure paths.
 
-**Slices never reference each other.** `Api.ArchitectureTests` discovers every namespace under
-`Api.Features.*` and asserts pairwise isolation, so a new slice is covered automatically. If two
-slices need shared code, move it *out* of `Features/` — do not relax the rule.
+## Traps
 
-**No assembly scanning for endpoint registration.** Every route is visible in `Program.cs`.
+Each of these fails silently or only on someone else's machine.
 
-**Data is a `record`.** Requests, responses, value objects — `public sealed record`, `init` not
-`set`, `required` for mandatory members. Value equality is what makes `Assert.Equal` compare contents
-in tests. Services and anything with behaviour stay classes.
-See [docs/data-models.md](docs/data-models.md).
+- **Request types must be `public`.** The validation generator skips internal types: validation
+  never runs and bad input returns 200, not 400.
+- **Keep `InterceptorsNamespaces` in `Api.csproj`** as `Microsoft.Extensions.Validation.Generated`.
+  The `Microsoft.AspNetCore.Http.Validation.Generated` name in older posts does nothing.
+- **Call `AddValidation()` from the assembly that defines the endpoints**, or validation does nothing.
+- **Every wire type needs an `ApiJsonSerializerContext` entry.** Under AOT a missing one fails at
+  runtime, not build.
+- **`TypedResults.Problem(...)` needs a matching `.ProducesProblem(status)`**, or the status is
+  missing from `openapi.json`.
+- **Keep `.config/dotnet-tools.json` to one tool.** With two, `dotnet tool restore` fails on any
+  fresh machine ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)). Run extra tools
+  with `dotnet tool exec`.
 
-**Exceptions are for bugs, not for expected failures.** A missing record, a rejected business rule,
-or invalid input is an outcome — return it as a typed result (`Results<Ok<T>, ValidationProblem,
-ProblemHttpResult>`) so it appears in the signature *and* in `openapi.json`. A thrown exception
-appears in neither, and becomes a 500 indistinguishable from a real bug. `CA1031` is an error, and
-`src/Api/Infrastructure/ProblemDetailsExceptionHandler.cs` is the safety net for what genuinely is
-exceptional. See [docs/errors-and-failures.md](docs/errors-and-failures.md).
+## CI
 
-**Hooks run before every commit and push.** `prek` enforces secret scanning, spelling, formatting
-and workflow linting on commit, and build/test/link-check on push. Formatting is fixed at edit time
-so hooks only verify — they never rewrite your files. See
-[docs/linting-and-hooks.md](docs/linting-and-hooks.md).
+Build, all tests, format, `openapi.json` drift, AOT publish with zero trim warnings, and a container
+that must serve its endpoints and probes under a size ceiling. A separate job scans full git
+history for secrets. Coverage is reported, not gated.
 
-**Warnings are errors.** So are NuGet audit findings (`NU1903`) — a dependency with a known
-advisory fails `restore`, not review.
+## Docs
 
-**`openapi.json` is committed and drift-gated.** CI regenerates it and fails if the result differs.
-API contract changes therefore show up in the PR diff.
+Open a page only when its trigger matches.
 
-## Traps that will silently cost you hours
+| If you're…                                                   | Read                                                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| considering a token-saving plugin or proxy                   | [docs/token-saving-tools.md](docs/token-saving-tools.md)               |
+| working here with an agent, or your token bill is high       | [docs/ai-workflow.md](docs/ai-workflow.md)                             |
+| writing C#, or wondering why the code looks like this        | [docs/code-style.md](docs/code-style.md)                               |
+| blocked by a hook, or adding a check                         | [docs/linting-and-hooks.md](docs/linting-and-hooks.md)                 |
+| defining a request, response or value object                 | [docs/data-models.md](docs/data-models.md)                             |
+| writing something that can fail, or about to `throw`         | [docs/errors-and-failures.md](docs/errors-and-failures.md)             |
+| sharing code between slices, or adding a non-slice           | [docs/code-organisation.md](docs/code-organisation.md)                 |
+| adding persistence                                           | [docs/adding-a-database.md](docs/adding-a-database.md)                 |
+| adding a NuGet package, or wondering why a library is absent | [docs/adding-a-dependency.md](docs/adding-a-dependency.md)             |
+| hit by a trim/AOT warning, or removing AOT                   | [docs/native-aot.md](docs/native-aot.md)                               |
+| blocked by a build gate                                      | [docs/build-gates.md](docs/build-gates.md)                             |
+| changing the image, or deploying                             | [docs/containers-and-deployment.md](docs/containers-and-deployment.md) |
+| changing any doc or instruction file                         | [docs/documentation-approach.md](docs/documentation-approach.md)       |
 
-These are real failures hit while building this template, not hypotheticals.
-
-**Validation request types must be `public`.** .NET 10's validation source generator only discovers
-public types. Mark a request record `internal` and the generated resolver comes back empty:
-validation never runs, invalid payloads return **200 instead of 400**, and there is no build error,
-no analyzer warning, and no log line. The convention here is that types crossing the HTTP boundary
-are `public`; everything else in a slice stays `internal`.
-
-**Validation also needs an MSBuild opt-in.** `Api.csproj` sets
-`InterceptorsNamespaces` to include `Microsoft.Extensions.Validation.Generated`. Most blog posts
-say `Microsoft.AspNetCore.Http.Validation.Generated` — that is the preview name and does nothing.
-Do not "fix" this property.
-
-**`AddValidation()` must be called from the assembly that defines the endpoints.** It is in
-`Program.cs` in the `Api` project for that reason. Moving it to a library breaks validation silently.
-
-**Every wire type needs an entry in `ApiJsonSerializerContext`.** Under Native AOT there is no
-reflection fallback — a missing entry fails at runtime, not at build.
-
-**Keep `.config/dotnet-tools.json` to one tool.** With two, `dotnet tool restore` fails on any
-machine with a fresh tool cache — a new clone, a CI runner, the devcontainer — crediting the second
-tool with the first tool's command ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)).
-A warm cache hides it, so it passes on your machine and fails everywhere else. Adding `dotnet-ef`
-is the likely way to hit it; run it through `dotnet tool exec` instead, and drop this note once the
-SDK is fixed.
-
-**`ProblemHttpResult` does not document its own status code.** It has no compile-time status, so a
-409 returned via `TypedResults.Problem(...)` is missing from `openapi.json` unless the endpoint also
-declares `.ProducesProblem(StatusCodes.Status409Conflict)`. Typed arms like `Ok<T>` are inferred and
-need no equivalent. Check the `openapi.json` diff after adding a failure path.
-
-## Native AOT constraints
-
-The API publishes with `PublishAot=true`, and CI fails on any trim or AOT warning. When writing code:
-
-- No reflection over types not statically referenced. No `Activator.CreateInstance`.
-- No dynamic code generation, `Reflection.Emit`, or runtime expression compilation.
-- System.Text.Json **source generation only** — never the reflection-based serializer.
-- Prefer `WebApplication.CreateSlimBuilder` (already used) over `CreateBuilder`.
-- `InvariantGlobalization=true` — no culture-aware formatting or comparison.
-
-If you add a library that is not AOT-safe, you have two honest options: replace it, or remove the
-AOT gate deliberately following [docs/native-aot.md](docs/native-aot.md). Do not suppress the
-warnings — suppressing `IL2026` does not make the code work, it moves the failure to runtime.
-
-## Testing conventions
-
-- xUnit v3 with built-in assertions. **Do not add an assertion library** —
-  see [docs/adding-a-dependency.md](docs/adding-a-dependency.md).
-- Test names read as sentences: `Post_greetings_rejects_invalid_input`.
-- Common usings are global, declared in `tests/Directory.Build.props` (a directory-scoped props file
-  that imports the root one). Add to that list rather than adding a using to every test file.
-- Unit tests target logic that does not need HTTP (`Greeter`), and mirror the source folder layout.
-- Integration tests assert against the **wire format** (`JsonDocument`), not the C# types, so they
-  stay honest when internals are renamed.
-- Integration tests must cover failure paths, not just happy paths. The validation trap above was
-  caught only because the 400s are asserted.
-
-## What CI enforces
-
-Build (warnings as errors) → unit + architecture tests → integration tests → `dotnet format
---verify-no-changes` → `openapi.json` drift → AOT publish with zero trim/AOT warnings → container
-build → container starts and serves both endpoints, with working health probes and an image-size
-ceiling. A separate job scans full git history for secrets, because the commit hook only sees
-staged changes. Coverage is collected and summarised on the run; it is not a gate.
-
-A green local `dotnet build && dotnet test && dotnet format --verify-no-changes` covers most of it.
-
-## When to read more
-
-Everything above applies to every task. The pages below do not — open one only when its trigger
-matches, and expect it to answer the question on its own without needing a second page.
-
-| If you're…                                                                   | Read                                                                   |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| considering a plugin or proxy that promises token savings                    | [docs/token-saving-tools.md](docs/token-saving-tools.md)               |
-| working with an agent here, or your token bill is too high                   | [docs/ai-workflow.md](docs/ai-workflow.md)                             |
-| writing C# here, or wondering why the code looks like it does                | [docs/code-style.md](docs/code-style.md)                               |
-| a hook blocked your commit, or you're adding a check                         | [docs/linting-and-hooks.md](docs/linting-and-hooks.md)                 |
-| defining a request, response, value object, or anything that holds data      | [docs/data-models.md](docs/data-models.md)                             |
-| an operation can fail, or you're about to `throw`                            | [docs/errors-and-failures.md](docs/errors-and-failures.md)             |
-| two slices need the same code, or you're adding something that isn't a slice | [docs/code-organisation.md](docs/code-organisation.md)                 |
-| adding EF Core, Dapper, Postgres, or any persistence                         | [docs/adding-a-database.md](docs/adding-a-database.md)                 |
-| adding a NuGet package, or wondering why some library is missing             | [docs/adding-a-dependency.md](docs/adding-a-dependency.md)             |
-| hit by a trim/AOT warning, or removing the AOT gate                          | [docs/native-aot.md](docs/native-aot.md)                               |
-| blocked by a build gate, or changing what's enforced                         | [docs/build-gates.md](docs/build-gates.md)                             |
-| changing the container image, or working out how to deploy                   | [docs/containers-and-deployment.md](docs/containers-and-deployment.md) |
-| changing any doc or instruction file, or looking for the ADRs                | [docs/documentation-approach.md](docs/documentation-approach.md)       |
-
-Adding a slice is a procedure rather than a decision, so it is a skill rather than a doc:
-`.claude/skills/add-slice/`. Non-Claude agents should follow the "Adding a slice" section above.
-
-There are no architecture decision records — [docs/documentation-approach.md](docs/documentation-approach.md)
-explains why. History comes from `git log`.
+There are no ADRs; history comes from `git log`.

@@ -1,26 +1,12 @@
 #!/usr/bin/env bash
 #
-# The one place that knows how to format this repo. Fixing only — nothing here verifies.
+# Formats the repo, or the files given. Fixing only; verification belongs to the git hooks.
 #
-# Callers:
-#   - .claude/hooks/format-cs.sh   (agent edit-time, one file)
-#   - you, by hand
+# Usage: scripts/format.sh [files...]
 #
-# Verification is prek's job, not this script's: .pre-commit-config.yaml runs `dprint check` and
-# `dotnet format --verify-no-changes` directly, with prek's own `files:` patterns doing the
-# dispatch. This script used to carry a --check mode for symmetry; nothing called it.
-#
-# Usage:
-#   scripts/format.sh [files...]
-#
-# With no files, formats the whole repo.
-#
-# Two traps live here so they live nowhere else. Both were hit for real during development, and
-# both fail *silently* — the command exits 0 and formats nothing:
-#
-#   1. `dotnet format --include` matches paths RELATIVE to the working directory. Given an
-#      absolute path it matches nothing and exits 0.
-#   2. `--no-restore` half-loads the workspace, so only some fixes apply. The rest then fail CI.
+# Two dotnet format traps, both silent (exit 0, nothing formatted):
+#   1. --include matches paths relative to the working directory, not absolute ones.
+#   2. --no-restore half-loads the workspace, so only some fixes apply.
 #
 set -euo pipefail
 
@@ -29,12 +15,8 @@ cd "$ROOT"
 
 SOLUTION="ModernDotnetTemplate.slnx"
 
-# Resolve a linter to the version mise pins, without requiring mise shims to be on PATH.
-#
-# This matters: the agent edit-time hook runs in whatever environment the editor gives it, which
-# often has no shims activated. Resolving through `mise exec` makes the script work everywhere and
-# always run the pinned version. Falling back to PATH keeps it usable without mise; failing loudly
-# is the last resort, because a formatter that silently does nothing is worse than no formatter.
+# The pinned version via `mise exec`, since editor hook environments often lack mise shims.
+# Falls back to PATH, then fails loudly: a formatter that silently does nothing is worse.
 tool() {
   local name="$1"; shift
   if command -v mise >/dev/null 2>&1 && mise which "$name" >/dev/null 2>&1; then
@@ -60,8 +42,7 @@ require() {
 cs_files=()
 other_files=()
 for f in "$@"; do
-  # Strip the repo root if the path is absolute; anything else is already repo-relative.
-  # Deliberately shell-only: this script must work on a box with no Python.
+  # Strip the repo root from absolute paths. Shell only, so no Python is needed.
   rel="${f#"$ROOT"/}"
   case "$rel" in
     *.cs) cs_files+=("$rel") ;;
