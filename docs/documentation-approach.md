@@ -1,7 +1,6 @@
 # Documentation approach
 
-**Read this if:** you are changing `docs/`, `AGENTS.md`, `CLAUDE.md` or a skill, or looking for the
-ADRs.
+**Read this if:** you are changing `docs/`, `AGENTS.md` or a skill, or looking for the ADRs.
 
 ## Requirements
 
@@ -23,9 +22,8 @@ grows and "what is true now?" means replaying it. For an agent retrieving one pa
 is a correctness risk: it can act on a decision reversed years ago.
 
 The cost of the alternative: a stale ADR is still correct about its moment; a stale living page is
-simply wrong, and nothing signals it. Two things mitigate that. Code comments point at the page that
-explains them. And a measured figure must have something that keeps it true, a CI assertion or a
-dated source, or it does not go in.
+simply wrong, and nothing signals it. Two things mitigate that: code comments point at the page that
+explains them, and nothing goes in without something that keeps it true (below).
 
 arc42 and Simon Brown's guidebook assume linear reading (fails 3 and 5). Diátaxis splits a task
 across pages by purpose (fails 4). Oxide-style RFDs are reasonable if you want provenance with
@@ -53,20 +51,26 @@ A procedure is a skill; an explanation is a doc. Anything that breaks the build 
 goes in `AGENTS.md` as one line, because a trap nobody reads about is not mitigated. Keep
 `AGENTS.md` short: it is re-sent on every turn of every session.
 
+## Measured figures
+
+A number needs an answer to "what keeps this true?": a CI assertion, or a dated source. A number
+typed in once is not allowed, because nothing will say when it stops being true. The same goes for
+counts and lists that restate something the repo already says.
+
 ## Page rules
 
 - **Named for the trigger.** "Adding a database", not "persistence": the task is the unit.
 - **Self-contained.** `adding-a-database.md` repeats the AOT removal steps from `native-aot.md` on
   purpose.
 - **Under about 150 lines.** Past that it is usually two tasks.
-- **Indexed in `AGENTS.md` and `docs/README.md`.** A page nothing points at is a page nothing reads.
+- **Indexed in `AGENTS.md`.** A page nothing points at is a page nothing reads.
 
-## AGENTS.md and CLAUDE.md
+## No CLAUDE.md
 
-`AGENTS.md` is the cross-vendor convention. Claude Code reads only `CLAUDE.md`, so that file is an
-`@AGENTS.md` import plus Claude-specific notes. A symlink breaks on Windows clones without
-`core.symlinks`; a copy drifts. If Claude Code starts reading `AGENTS.md` natively, delete
-`CLAUDE.md`.
+`AGENTS.md` is the cross-vendor convention, and Claude Code has read it natively since v2.1.277, so
+there is no `CLAUDE.md`. That has a silent failure mode, recorded in the `AGENTS.md` traps: any
+`CLAUDE.md` or `CLAUDE.local.md` in the tree takes precedence, and older versions read nothing. The
+fix for either is a `CLAUDE.md` containing `@AGENTS.md`, never a copy, which would drift.
 
 ## Adding something
 

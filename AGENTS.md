@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Canonical instructions for coding agents. `CLAUDE.md` imports this file; change conventions here.
+Instructions for coding agents, read natively by most of them, including Claude Code (v2.1.277+).
 
 A .NET 10 service template: minimal APIs in vertical slices, Aspire, Native AOT, strict build gates.
 No domain, data layer or dispatch framework, on purpose. The `Ping` and `Greetings` slices
@@ -70,15 +70,31 @@ Each of these fails silently or only on someone else's machine.
   runtime, not build.
 - **`TypedResults.Problem(...)` needs a matching `.ProducesProblem(status)`**, or the status is
   missing from `openapi.json`.
+- **A `CLAUDE.md` or `CLAUDE.local.md` in the repo or above it replaces this file** for Claude Code,
+  silently, unless it imports it with `@AGENTS.md`. Claude Code before v2.1.277 (v2.1.281 on
+  Bedrock or with telemetry off) needs exactly that import.
 - **Keep `.config/dotnet-tools.json` to one tool.** With two, `dotnet tool restore` fails on any
   fresh machine ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)). Run extra tools
   with `dotnet tool exec`.
+
+## Claude Code
+
+- **`/add-slice`**: the full recipe for a new slice.
+- **`slice-reviewer`** agent: reviews a slice before a PR.
+- **`codebase-locator`** agent: answers "where is X?" on the cheapest model, in its own context.
+  Prefer it over searching from the main thread.
+- A `PostToolUse` hook formats every `.cs`, `.md` and `.json` file you edit, so don't hand-format.
+  If it reports a failure, that file is **not** formatted; fix the cause before moving on.
+
+After a change, read the `src/Api/openapi.json` diff before calling the work done: it is the API
+contract.
 
 ## CI
 
 Build, all tests, format, `openapi.json` drift, AOT publish with zero trim warnings, and a container
 that must serve its endpoints and probes under a size ceiling. A separate job scans full git
-history for secrets. Coverage is reported, not gated.
+history for secrets, and PR titles must be conventional commits, since squash merging makes the
+title the commit on `main`. Coverage is reported, not gated.
 
 ## Docs
 
@@ -86,8 +102,7 @@ Open a page only when its trigger matches.
 
 | If you're…                                                   | Read                                                                   |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| considering a token-saving plugin or proxy                   | [docs/token-saving-tools.md](docs/token-saving-tools.md)               |
-| working here with an agent, or your token bill is high       | [docs/ai-workflow.md](docs/ai-workflow.md)                             |
+| working here with an agent, or weighing a token-saving tool  | [docs/ai-workflow.md](docs/ai-workflow.md)                             |
 | writing C#, or wondering why the code looks like this        | [docs/code-style.md](docs/code-style.md)                               |
 | blocked by a hook, or adding a check                         | [docs/linting-and-hooks.md](docs/linting-and-hooks.md)                 |
 | defining a request, response or value object                 | [docs/data-models.md](docs/data-models.md)                             |

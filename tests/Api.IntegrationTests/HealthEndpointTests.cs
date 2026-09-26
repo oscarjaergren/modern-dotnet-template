@@ -3,9 +3,8 @@ using System.Net;
 namespace Api.IntegrationTests;
 
 /// <summary>
-/// The probes a deployment actually calls. These are mapped in every environment, so the thing
-/// worth asserting is not that they answer — it is that they answer with nothing useful to an
-/// attacker.
+/// The probes a deployment calls. The exact-match body assertion is the point: a detailed writer
+/// would name every check, and this fails the moment the body says more than the status.
 /// </summary>
 [Collection(nameof(ApiCollection))]
 public class HealthEndpointTests(ApiFixture fixture)
@@ -13,25 +12,11 @@ public class HealthEndpointTests(ApiFixture fixture)
     [Theory]
     [InlineData("/health")]
     [InlineData("/alive")]
-    public async Task Probe_reports_healthy(string path)
+    public async Task Probe_body_is_the_status_and_nothing_else(string path)
     {
         var response = await fixture.Client.GetAsync(new Uri(path, UriKind.Relative), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
-    }
-
-    [Theory]
-    [InlineData("/health")]
-    [InlineData("/alive")]
-    public async Task Probe_does_not_name_its_checks(string path)
-    {
-        // A detailed response writer would list every registered check by name, which tells an
-        // unauthenticated caller what the service depends on. The body is the aggregate status
-        // and nothing else — see ServiceDefaults.Extensions.WriteStatusOnly.
-        var body = await fixture.Client.GetStringAsync(new Uri(path, UriKind.Relative), TestContext.Current.CancellationToken);
-
-        Assert.DoesNotContain("self", body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("{", body, StringComparison.Ordinal);
     }
 }

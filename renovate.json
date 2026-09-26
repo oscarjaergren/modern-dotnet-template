@@ -2,7 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    ":dependencyDashboard",
     ":semanticCommits",
     "helpers:pinGitHubActionDigests"
   ],
@@ -54,7 +53,7 @@
       "groupName": "GitHub Actions"
     },
     {
-      "description": "Never auto-bump the SDK across a major \u2014 that is a deliberate migration.",
+      "description": "Never auto-bump the SDK across a major — that is a deliberate migration.",
       "matchManagers": [
         "dotnet-sdk"
       ],
@@ -79,8 +78,5 @@
       "at any time"
     ],
     "prPriority": 10
-  },
-  "lockFileMaintenance": {
-    "enabled": false
   }
 }

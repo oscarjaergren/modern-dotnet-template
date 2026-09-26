@@ -44,7 +44,7 @@ Keep `CopyOutputSymbolsToPublishDirectory=false`. Nothing else depends on AOT.
 AOT writes symbols to a separate `Api.dbg`, several times the size of the binary, and the SDK copies
 it into the publish folder, and so into the image. `CopyOutputSymbolsToPublishDirectory=false` stops
 that; filtering `ResolvedFileToPublish` does not, because the `.dbg` never passes through it. The
-symbols stay in `artifacts/bin/Api/release_linux-x64/native/`, and CI uploads them.
+symbols stay in `artifacts/bin/Api/release_linux-x64/native/` for symbolication.
 
 ## VerifyReferenceAotCompatibility is off on purpose
 

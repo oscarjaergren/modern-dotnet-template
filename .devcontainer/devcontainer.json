@@ -20,7 +20,6 @@
     "vscode": {
       "extensions": [
         "ms-dotnettools.csdevkit",
-        "ms-dotnettools.csharp",
         "ms-azuretools.vscode-docker",
         "humao.rest-client",
         "editorconfig.editorconfig"

@@ -52,7 +52,7 @@
   <PropertyGroup Label="Keep debug symbols out of the runtime image">
     <!--
       Keeps AOT debug symbols (Api.dbg, several times the binary's size) out of the image. They are
-      still written to artifacts/bin/Api/release_linux-x64/native/, which CI uploads.
+      still written to artifacts/bin/Api/release_linux-x64/native/.
     -->
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>

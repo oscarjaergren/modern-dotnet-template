@@ -56,7 +56,8 @@ this repo failed on a vulnerable transitive package, which is the point:
 
 ## Agents and docs
 
-`AGENTS.md` is canonical; `CLAUDE.md` imports it. It lists the traps that fail silently, such as an
+`AGENTS.md` holds the agent instructions, and Claude Code reads it natively. It lists the traps that
+fail silently, such as an
 `internal` request type turning off validation, and indexes `docs/`, where each page is named for
 the task that sends you there. There are no ADRs:
 [documentation-approach.md](docs/documentation-approach.md) explains why.
