@@ -116,6 +116,13 @@ Do not "fix" this property.
 **Every wire type needs an entry in `ApiJsonSerializerContext`.** Under Native AOT there is no
 reflection fallback — a missing entry fails at runtime, not at build.
 
+**Keep `.config/dotnet-tools.json` to one tool.** With two, `dotnet tool restore` fails on any
+machine with a fresh tool cache — a new clone, a CI runner, the devcontainer — crediting the second
+tool with the first tool's command ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)).
+A warm cache hides it, so it passes on your machine and fails everywhere else. Adding `dotnet-ef`
+is the likely way to hit it; run it through `dotnet tool exec` instead, and drop this note once the
+SDK is fixed.
+
 **`ProblemHttpResult` does not document its own status code.** It has no compile-time status, so a
 409 returned via `TypedResults.Problem(...)` is missing from `openapi.json` unless the endpoint also
 declares `.ProducesProblem(StatusCodes.Status409Conflict)`. Typed arms like `Ok<T>` are inferred and

@@ -51,7 +51,7 @@
     <!--
       Coverage is collected, not gated. A percentage threshold rewards padding the number; the
       useful question is "which class has no tests?", which the per-class report answers.
-      ReportGenerator (see .config/dotnet-tools.json) merges the three reports and renders them.
+      ReportGenerator, run as its GitHub Action in ci.yml, merges the three reports and renders them.
     -->
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
