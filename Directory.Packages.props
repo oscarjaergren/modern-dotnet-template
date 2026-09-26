@@ -11,28 +11,28 @@
   </PropertyGroup>
 
   <ItemGroup Label="Aspire">
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.0" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.9.0" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.4" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
   </ItemGroup>
 
   <ItemGroup Label="OpenTelemetry">
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
   </ItemGroup>
 
   <ItemGroup Label="API">
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.12" />
     <!--
       Transitive pin. Microsoft.AspNetCore.OpenApi drags in Microsoft.OpenApi 2.0.0, which carries
       a high-severity advisory (GHSA-v5pm-xwqc-g5wc). CentralPackageTransitivePinningEnabled lets us
       override it here without taking a direct dependency. NuGet audit (NU1903) is an error in this
       repo, so a regression here fails restore rather than shipping quietly.
-      Do not bump to 3.x: Microsoft.AspNetCore.OpenApi 10.0.11 requires [2.7.5, 3.0.0).
+      Do not bump to 3.x: Microsoft.AspNetCore.OpenApi 10.0.12 requires [2.7.5, 3.0.0).
     -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.12.0" />
   </ItemGroup>
@@ -44,7 +44,7 @@
       which matters here because InvariantGlobalization=true means those operations silently
       behave differently instead of throwing. See docs/build-gates.md.
     -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.170" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.290" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">
@@ -54,8 +54,8 @@
       ReportGenerator (see .config/dotnet-tools.json) merges the three reports and renders them.
     -->
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
-    <PackageVersion Include="xunit.v3" Version="4.0.0" />
-    <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.3" />
+    <PackageVersion Include="xunit.v3" Version="4.0.1" />
+    <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.4" />
   </ItemGroup>
 
 </Project>

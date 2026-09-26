@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.5.0">
+<Project Sdk="Aspire.AppHost.Sdk/13.5.4">
 
   <!--
     Aspire orchestration. This project is a development-time concern: it is never deployed,
