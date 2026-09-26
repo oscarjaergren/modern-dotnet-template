@@ -127,7 +127,7 @@ repos:
       - id: dotnet-format-check
         name: dotnet format (whole solution)
         description: Verifies only. Fix with scripts/format.sh
-        entry: dotnet format ModernDotnetTemplate.slnx --verify-no-changes
+        entry: dotnet format --verify-no-changes
         language: system
         stages: [pre-push]
         pass_filenames: false
