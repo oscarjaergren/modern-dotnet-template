@@ -60,7 +60,9 @@ require() {
 cs_files=()
 other_files=()
 for f in "$@"; do
-  rel="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' "$f" "$ROOT")"
+  # Strip the repo root if the path is absolute; anything else is already repo-relative.
+  # Deliberately shell-only: this script must work on a box with no Python.
+  rel="${f#"$ROOT"/}"
   case "$rel" in
     *.cs) cs_files+=("$rel") ;;
     *)    other_files+=("$rel") ;;

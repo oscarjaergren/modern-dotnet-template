@@ -8,7 +8,7 @@
 # The .NET SDK is deliberately NOT managed here. global.json already pins it, and two mechanisms
 # claiming the same responsibility is how they drift apart.
 #
-# Bootstrap:  mise install && prek install --install-hooks
+# Bootstrap:  mise install && prek install
 # Update:     mise outdated  (Renovate also raises PRs against this file)
 
 [tools]
@@ -19,6 +19,7 @@ editorconfig-checker = "3.11.1"  # .editorconfig compliance for non-C# files
 actionlint = "1.7.12"            # GitHub Actions workflows
 shellcheck = "0.11.0"            # shell scripts, and actionlint's inline-bash checks
 dprint = "0.56.0"                # markdown + json formatting
+jq = "1.8.1"                     # reads the agent hook's JSON payload
 lychee = "0.24.2"                # link checking (pre-push: network-bound)
 committed = "1.1.11"             # conventional commit messages
 

@@ -14,8 +14,10 @@ Without the second command a fresh clone has no hooks at all, and nothing will t
 
 ## What runs when
 
-Stage is a performance decision. The commit hook is kept under half a second because a slow commit
-hook gets bypassed, and a bypassed hook is worse than none — it creates confidence without cover.
+Stage is a performance decision. The commit hook is kept fast because a slow one gets bypassed, and
+a bypassed hook is worse than none — it creates confidence without cover. There is no fixed budget;
+the line is "fast enough that nobody reaches for `--no-verify`", and anything that loads the whole
+.NET workspace is on the wrong side of it.
 
 | Stage      | Checks                                                                                                                                                                                    | Typical |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -73,7 +75,11 @@ The requirement that shaped the configuration:
 - **A missing tool fails.** Linters are invoked through `mise exec`, so the pinned version is the one
   that runs. If mise or the tool is absent the hook errors — it never falls back to whatever happens
   to be on PATH, and never skips.
-- **No `|| true`, no `continue-on-error`.** Anywhere.
+- **No `|| true`, no `continue-on-error`** in any check. The single `|| true` in the repo is
+  container cleanup inside a CI `trap`, where failing to delete a container must not replace the
+  real test result.
+- **The agent hook reports, it does not swallow.** A formatting failure exits 2, which shows the
+  error to the agent instead of letting it believe its output is CI-clean.
 - **`fail_fast` is off**, so one run reports every failure rather than stopping at the first. Fixing
   is one round trip instead of one per problem.
 - **Every failure names the command that fixes it.**

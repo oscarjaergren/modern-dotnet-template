@@ -19,8 +19,9 @@ import is used instead. See `docs/documentation-approach.md`.
 - **`codebase-locator`** (`.claude/agents/`) — answers "where is X?" on the cheapest model tier, in
   its own context window, so the main thread never pays for the files it opened. Prefer it over
   searching from the main thread. See [docs/ai-workflow.md](docs/ai-workflow.md).
-- A `PostToolUse` hook runs `dotnet format` on any `.cs` file you edit, so formatting stays
-  CI-clean without being asked. Do not hand-format to satisfy it.
+- A `PostToolUse` hook formats every `.cs`, `.md` and `.json` file you edit, so output stays
+  CI-clean without being asked. Do not hand-format to satisfy it. If it reports a failure, that file
+  is **not** formatted — fix the cause before moving on.
 
 ## Working style in this repo
 
