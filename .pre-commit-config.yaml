@@ -93,8 +93,8 @@ repos:
 
       # --- formatting: verify only. scripts/format.sh is the fixer. ----------------------------
       # dprint is milliseconds, so it runs on commit. `dotnet format` takes ~5s because it loads
-      # the whole workspace even with --include, which would put the commit hook 3x over budget —
-      # so it runs on pre-push instead. Formatting is already fixed at edit time by
+      # the whole workspace even with --include — slow enough on every commit that people reach for
+      # --no-verify — so it runs on pre-push instead. Formatting is already fixed at edit time by
       # .claude/hooks/format-cs.sh, making both of these a safety net rather than the mechanism.
       - id: dprint-check
         name: dprint (markdown, json)
@@ -132,7 +132,7 @@ repos:
         name: dotnet test
         # NOT `dotnet test --nologo`. The Microsoft.Testing.Platform runner does not accept that
         # flag and silently matches zero test modules — it reports "Zero tests ran" and would look
-        # like a pass to anyone not reading the exit code. Verified: plain runs 24, --nologo runs 0.
+        # like a pass to anyone not reading the exit code. Verified: plain runs the suite, --nologo runs 0.
         entry: dotnet test
         language: system
         stages: [pre-push]
