@@ -1,81 +1,53 @@
 # Code organisation
 
-**Read this if:** two slices need the same code, you are adding something that is not a slice, or you
-are wondering why the layout is like this.
+**Read this if:** two slices need the same code, you are adding something that isn't a slice, or you
+wonder why the layout is like this.
 
-## What a slice is
+## Slices
 
-One folder under `src/Api/Features/` owning everything for one feature: the endpoint, its request
-and response types, and its logic. `Greetings` is the reference implementation.
+A slice is one folder under `src/Api/Features/` that owns a feature: endpoint, request and response
+types, and logic. `Greetings` is the reference. Organising by layer (`Controllers/`, `Services/`,
+`Repositories/`) spreads one change across four folders; a slice keeps it in one, so deleting a
+feature is deleting a directory, and an agent extending the API reads one folder, not the repo.
 
-The alternative is organising by technical layer — `Controllers/`, `Services/`, `Repositories/` —
-where a single change is spread across four folders and you must hold the whole structure in your
-head to touch any of it. Slices trade that for locality: a feature is one directory, and deleting it
-is `rm -rf` on that directory.
+## Slices never reference each other
 
-This is also the property that makes the codebase workable for an agent. Extending the API means
-reading one folder, not the repository.
+`Api.ArchitectureTests` enforces it, and discovers slices by namespace, so a new slice is covered
+automatically. A companion test fails when there are fewer than two slices, because with one the
+rule passes vacuously. If you delete both samples before you have two real slices, expect that
+failure until you do.
 
-## The rule that makes it real
-
-**A slice may not reference another slice.** `Api.ArchitectureTests` discovers every namespace under
-`Api.Features.*` and asserts pairwise isolation, so a newly added slice is covered automatically and
-nobody has to remember to update the test.
-
-Without enforcement this is a convention that decays — one "temporary" cross-reference at a time
-until the folders are decorative. With enforcement it is a constraint that forces a better question
-when two slices want the same code: *where does this actually belong?*
-
-If you change the guard, verify it still fails. Introduce a deliberate cross-slice reference, watch
-the test fail naming the exact pair, then revert. An unverified guard is decoration — see
-[build-gates.md](build-gates.md).
+If you change the rule, prove it still fails: add a deliberate cross-slice reference, watch the test
+name it, then revert.
 
 ## Where shared code goes
 
-Not in another slice. Out of `Features/` entirely.
+Out of `Features/` entirely, never into another slice. `src/Api/Infrastructure/` is the example:
+`ProblemDetailsExceptionHandler` belongs to no feature. Before moving anything, wait for the second
+caller: code only one slice uses is that slice's code. When shared code grows its own dependencies
+and lifecycle, promote it to a project under `src/`.
 
-`src/Api/Infrastructure/` is the worked example — `ProblemDetailsExceptionHandler` lives there
-because it is genuinely cross-cutting and belongs to no feature. Anything that several slices need,
-or that is about the application rather than a feature, goes in a sibling namespace outside
-`Features/`.
+## Explicit registration
 
-A useful test before you move something: **if only one slice needs it, it is not shared** — it is
-that slice's code, and moving it out makes both harder to read. Wait for the second caller.
-
-If shared code grows past a folder into something with its own dependencies and lifecycle, promote it
-to a project in `src/`. That is a real threshold, not a formality; most templates do not reach it.
-
-## Registration is explicit
-
-Each slice exposes one extension method and `Program.cs` calls it:
+Each slice exposes one extension method, and `Program.cs` calls it:
 
 ```csharp
 app.MapPing();
 app.MapGreetings();
 ```
 
-No assembly scanning, no attribute discovery, no source-generated registration. Every route the
-application serves is visible in one file, and finding the code behind a route is one grep.
+No assembly scanning or attribute discovery, so every route is visible in one file. The cost is one
+hand-written line per slice.
 
-The cost is a line per slice, written by hand. That is the whole cost, and it buys a codebase where
-"what endpoints exist?" is answerable by reading rather than by running.
+## Not here on purpose
 
-## What is deliberately not here
-
-There is no dispatch library — no MediatR, no Wolverine. The `Features/` layout gives you slice
-co-location, which is the part that makes the code navigable; handler discovery and a request
-pipeline are a separate and much larger decision. See
-[adding-a-dependency.md](adding-a-dependency.md).
-
-There is no `Domain/`, `Application/`, or `Infrastructure/` layering. There is an `Infrastructure/`
-folder, but it holds cross-cutting application plumbing, not a layer in the onion sense — nothing
-depends on it in one direction by policy.
+No dispatch library (MediatR, Wolverine): slices give co-location, which is what makes the code
+navigable, and a request pipeline is a separate, larger decision; see
+[adding-a-dependency.md](adding-a-dependency.md). No onion layering; `Infrastructure/` is plumbing,
+not a layer.
 
 ## Tests mirror the source
 
-`tests/Api.UnitTests/Features/Greetings/` tests `src/Api/Features/Greetings/`. The shapes are
-identical on purpose: asked to "add tests for slice X", there is exactly one place the file goes and
-no judgement required.
-
-Integration tests follow the same layout and assert against the wire format rather than the C# types,
-so they stay honest when internals are renamed.
+`tests/Api.UnitTests/Features/Greetings/` tests `src/Api/Features/Greetings/`, so a new test has
+exactly one place to go. Integration tests follow the same layout and assert the wire format, so they
+survive renames.

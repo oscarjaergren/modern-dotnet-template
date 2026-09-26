@@ -1,129 +1,79 @@
 # Containers and deployment
 
 **Read this if:** you are changing how the image is built, looking for the Dockerfile, or working out
-how to deploy this.
+how to deploy.
 
-## There is no Dockerfile, on purpose
+## No Dockerfile
 
-The .NET SDK produces an OCI image directly. Configuration lives in `src/Api/Api.csproj`:
+The SDK builds the OCI image from `src/Api/Api.csproj`:
 
 ```bash
 dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer
 ```
 
-A hand-written multi-stage Dockerfile is another artifact to keep correct as the project evolves —
-base image tags, build stages, and layer ordering all drift, and nothing fails when they do. The SDK
-derives all of it from the project.
-
-Aspire uses the same mechanism internally: its container image builder runs
-`dotnet publish /t:PublishContainer` for .NET project resources. So this is one mechanism, not two,
-and anything configured here is inherited by Aspire's publish path automatically.
-
-CI gates it: the image is built, run, and curled, including a check that invalid input returns 400.
+A hand-written Dockerfile drifts (base tags, stages, layer order) and nothing fails when it does.
+Aspire's publisher uses this same mechanism, so anything configured here applies there too. CI
+runs the image and checks the endpoints, a 400 on bad input, a 409 with a `traceId`, both health
+probes, and a compressed size ceiling.
 
 ## Base image
 
-`ContainerFamily=noble-chiseled`, which resolves to
-`mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled` — runtime-deps because an AOT app is
-self-contained and needs no .NET runtime. Chiseled means no shell and no package manager in the
-image, and it runs as a non-root user by default.
+`ContainerFamily=noble-chiseled` resolves to `mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled`:
+runtime-deps because an AOT binary needs no .NET runtime, chiseled so there is no shell or package
+manager, and non-root by default. The family is set explicitly so an SDK change can't move it.
 
-**Do not switch to a `chiseled-aot` base.** Widely-copied advice recommends one, and Microsoft's own
-`publish-configuration` documentation still carries stale `8.0.200`-era text mentioning
-`jammy-chiseled-aot`. There is no `-aot` variant for .NET 10 in any family — querying MCR's tag list
-directly, `-aot` images exist only for .NET 8 and 9 and only on Alpine/musl. Setting one gets you a
-tag that does not exist.
-
-Set the family explicitly rather than relying on inference, so a future SDK change cannot silently
-move you to a different base.
+**Do not use a `chiseled-aot` base.** Much copied advice, and some stale Microsoft docs, suggest one,
+but no `-aot` tag exists for .NET 10; they were .NET 8 and 9 on Alpine only.
 
 ## Patching: AOT moves the runtime into your binary
 
-For a framework-dependent app, a .NET security release reaches production when you rebuild on a
-fresh base image, because the runtime lives in the image. **That does not work here.** `runtime-deps`
-contains no .NET at all. The runtime is compiled into the `Api` binary by the ILCompiler that ships
-with your SDK, so there are two patch streams and they move differently:
+`runtime-deps` contains no .NET. The runtime is compiled into the `Api` binary by your SDK's
+ILCompiler, so there are two patch streams:
 
-| What                         | Lives in                  | Picked up by                                        |
-| ---------------------------- | ------------------------- | --------------------------------------------------- |
-| OS libraries — OpenSSL, libc | the `noble-chiseled` base | any rebuild; the floating tag pulls the current one |
-| The .NET runtime             | your binary               | a rebuild **with a newer SDK** — bump `global.json` |
+| What                        | Lives in                  | Picked up by                                        |
+| --------------------------- | ------------------------- | --------------------------------------------------- |
+| OS libraries: OpenSSL, libc | the `noble-chiseled` base | any rebuild; the floating tag pulls the current one |
+| The .NET runtime            | your binary               | a rebuild **with a newer SDK**                      |
 
-The second row is the one that catches people. Rebuilding with the same SDK recompiles the same
-runtime, however fresh the base layer.
-
-`global.json` sets a **floor**, not an exact version: with `rollForward: latestFeature`, a build uses
-the newest installed 10.0 SDK at or above it. So the runtime you ship depends on the machine that
-builds it. The .NET 10.0.12 security release (8 September 2026, six CVEs) showed both sides: CI's
-runner already had SDK 10.0.401 and compiled in the patched runtime, while a developer machine
-with only 10.0.400 compiled in the vulnerable 10.0.11, from the same commit.
-
-Raising the floor is what makes the patch unconditional — no machine can build with an older SDK
-once `global.json` says 10.0.401. Treat that bump as a security fix, not housekeeping: Renovate
-raises it on the same schedule as everything else, and for this app it is worth merging promptly.
+Rebuilding with the same SDK recompiles the same runtime, however fresh the base. And
+`global.json` is a floor, not a pin: with `rollForward: latestFeature` a build uses the newest
+installed SDK above it. When .NET 10.0.12 fixed six CVEs (8 September 2026), CI's runner had SDK
+10.0.401 and shipped the fix, while a machine with only 10.0.400 compiled the vulnerable runtime
+from the same commit. Raising the floor in `global.json` makes a patch unconditional, so treat that
+Renovate PR as a security fix.
 
 ## Image size
 
-Two things dominate, and one of them is a trap.
+The trap is AOT debug symbols: by default `Api.dbg`, several times the binary's size, is copied into
+the image. `CopyOutputSymbolsToPublishDirectory=false` prevents it; see
+[native-aot.md](native-aot.md). CI fails the build if the compressed image grows past the ceiling set in `ci.yml`.
 
-`CopyOutputSymbolsToPublishDirectory=false` keeps the AOT debug symbols out of the image. By default
-the SDK copies `Api.dbg` into the publish folder, and it is substantially larger than the binary
-itself — the image ends up several times the size of the thing it runs. Symbols are still written to
-`artifacts/bin/Api/release_linux-x64/native/` and uploaded by CI as an artifact.
+## Deployment is yours
 
-Filtering `ResolvedFileToPublish` does **not** work for this; the native `.dbg` never passes through
-that item group. Use the property.
-
-CI prints the current image size on every run, which is the number to trust. Figures written into
-documentation go stale the first time someone adds a package.
-
-## Deployment is not chosen for you
-
-There is no Kubernetes manifest, no IaC, and no cloud target. Aspire describes the application; where
-it runs is yours to decide.
-
-Aspire's Docker Compose publisher is deliberately **not** wired in, because
-`AddDockerComposeEnvironment()` adds a compute environment — a deployment-target opinion this
-template does not hold.
-
-To opt in, add `Aspire.Hosting.Docker` to `src/AppHost` (and its version to
-`Directory.Packages.props`), then one line in `src/AppHost/AppHost.cs`:
+No Kubernetes manifests, IaC or cloud target. Aspire's Docker Compose publisher is not wired in,
+because `AddDockerComposeEnvironment()` adds a deployment target. To opt in, add
+`Aspire.Hosting.Docker` to `src/AppHost` (version in `Directory.Packages.props`), then:
 
 ```csharp
 builder.AddDockerComposeEnvironment("compose");
 ```
 
-Then:
-
 ```bash
-aspire publish -p docker-compose
+aspire publish -p docker-compose   # writes docker-compose.yaml and .env
 ```
 
-which emits `docker-compose.yaml` and `.env`. Because Aspire builds project images with
-`dotnet publish /t:PublishContainer`, everything above — AOT, chiseled base, symbol exclusion — is
-inherited with nothing to duplicate.
-
-Generated deployment artifacts are build output and are gitignored, the same way a rendered Helm
-chart would be. `src/Api/openapi.json` is different: that is a contract, and it is committed.
+The image it references is built the same way as above. Generated deployment files are build output
+and gitignored; `src/Api/openapi.json` is a contract and is committed.
 
 ## Health endpoints
 
-`ServiceDefaults` maps `/health` (readiness) and `/alive` (liveness) **in every environment**, and
-the container gate in CI asserts both answer from the published image.
+`/health` (readiness) and `/alive` (liveness) are mapped in every environment, unlike the Aspire
+template's Development-only default. That default guards against a real leak, but the leak is in the
+response body, where a detailed writer names every check. `WriteStatusOnly` returns `Healthy` or
+`Unhealthy` and nothing else, and integration tests assert it.
 
-This departs from the Aspire template, which maps them in Development only. That default is aimed
-at a real leak — a detailed health response names every registered check, so it publishes your
-dependency list to anyone who asks — but the leak is in the *response body*, not the route.
-`Extensions.WriteStatusOnly` writes the aggregate status and nothing else: `Healthy` or
-`Unhealthy`, no check names, no exception text. Two integration tests assert that.
+The trade-off: anyone can tell the service is up, as any load balancer already can. In return,
+Kubernetes and Container Apps can probe the image without edits. If you add a detailed writer, put
+it behind authentication or on a separate port.
 
-What you are accepting: an unauthenticated caller can tell the service is up. That is what every
-load balancer in front of it already knows. What you get: a container Kubernetes and Container Apps
-can probe without editing the template first, which was the single most likely thing to surprise
-you on a first deployment.
-
-If you swap in a detailed writer — worth doing behind a boundary, since per-check detail is genuinely
-useful — put it on a separate port or behind authentication at the same time.
-
-The runtime `/openapi/v1.json` endpoint is Development-only for the same reason. The document is
-committed to the repository, so nothing needs to serve it in production.
+The runtime `/openapi/v1.json` endpoint stays Development-only; the document is committed instead.

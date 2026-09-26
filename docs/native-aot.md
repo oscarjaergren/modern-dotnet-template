@@ -1,113 +1,70 @@
 # Native AOT
 
-**Read this if:** a trim or AOT warning is failing your build, something works locally but crashes in
-the published binary, or you want to remove the AOT gate.
+**Read this if:** a trim or AOT warning is failing your build, something works locally but crashes
+in the published binary, or you want to remove the AOT gate.
 
-## What is on and why
+## What is on
 
-`src/Api` publishes with `PublishAot=true` and `InvariantGlobalization=true`. Trim and AOT
-diagnostics (`IL2026`, `IL3050`, `IL2091`) are errors, and CI **runs the published binary** and
-exercises the endpoints rather than just publishing it — AOT failures surface at runtime, so a
-successful publish proves very little on its own.
+`src/Api` publishes with `PublishAot=true` and `InvariantGlobalization=true`. `IL2026`, `IL3050`
+and `IL2091` are errors, and CI runs the published binary against every endpoint, because AOT
+failures show up at runtime rather than at publish. It is on by default because it costs almost
+nothing without a data layer, and removing it later is four lines while retrofitting it is painful.
 
-It is on by default because it is nearly free while there is no data layer, and because retrofitting
-it onto a mature codebase is painful while removing it is a four-line change.
+## Constraints
 
-## The constraints
-
-- No reflection over types that are not statically referenced. No `Activator.CreateInstance`.
-- No `Reflection.Emit`, runtime expression compilation, or dynamic proxy generation.
-- System.Text.Json **source generation only**. Every type crossing the wire must be listed in
-  `src/Api/ApiJsonSerializerContext.cs`; a missing entry fails at runtime, not at build.
-- `WebApplication.CreateSlimBuilder`, not `CreateBuilder` — the slim host omits the reflection-heavy
-  defaults.
-- `InvariantGlobalization=true` means no culture-aware formatting or comparison.
+- No reflection over types that aren't statically referenced; no `Activator.CreateInstance`.
+- No `Reflection.Emit`, runtime expression compilation or dynamic proxies.
+- System.Text.Json source generation only. Every wire type goes in `ApiJsonSerializerContext.cs`; a
+  missing entry fails at runtime.
+- `WebApplication.CreateSlimBuilder`, not `CreateBuilder`.
+- No culture-aware formatting or comparison.
 
 ## When a warning fires
 
-Read it literally. `IL2026` means a called method is annotated `RequiresUnreferencedCode`; `IL3050`
-means `RequiresDynamicCode`. Both mean the library does something that cannot survive trimming.
+`IL2026` means a called method needs unreferenced code; `IL3050` means it needs dynamic code. In
+order of preference: use an AOT-safe overload in the same library, use a different library
+([adding-a-dependency.md](adding-a-dependency.md)), or remove the gate deliberately.
 
-In order of preference:
-
-1. **Use a different API in the same library** — often there is a source-generated or explicitly
-   typed overload that is AOT-safe.
-2. **Use a different library.** See `docs/adding-a-dependency.md`.
-3. **Remove the AOT gate deliberately**, below.
-
-**Do not suppress the warning.** A suppressed `IL2026` does not make the code work; it makes the
-failure move to runtime, where it appears as a confusing `MissingMetadataException` in production
-rather than a clear error at build time. That trade is never worth it.
+**Never suppress the warning.** That doesn't make the code work; it moves the failure to runtime.
 
 ## Removing the gate
 
-Legitimate, documented, and most likely if you are adding EF Core — see `docs/adding-a-database.md`,
-which covers the persistence side.
+Most likely when adding EF Core; see [adding-a-database.md](adding-a-database.md).
 
-1. `src/Api/Api.csproj` — delete `<PublishAot>true</PublishAot>`.
-2. `src/Api/Api.csproj` — optionally delete `<InvariantGlobalization>true</InvariantGlobalization>`.
-3. `.github/workflows/ci.yml` — delete the `aot-container` job, or keep the container publish and
-   drop the AOT expectations.
-4. `.editorconfig` — optionally relax `IL2026` / `IL3050` / `IL2091` from `error`.
+1. `src/Api/Api.csproj`: delete `<PublishAot>true</PublishAot>`.
+2. `src/Api/Api.csproj`: optionally delete `<InvariantGlobalization>true</InvariantGlobalization>`.
+3. `.github/workflows/ci.yml`: delete the `aot-container` job, or keep the container and drop the
+   AOT expectations.
+4. `.editorconfig`: optionally relax `IL2026`, `IL3050`, `IL2091`.
 
-Keep `<CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>`; it is still
-correct and keeps debug symbols out of the image.
-
-Nothing else depends on AOT. Slices, gates, tests, and container publishing work unchanged.
+Keep `CopyOutputSymbolsToPublishDirectory=false`. Nothing else depends on AOT.
 
 ## Debug symbols
 
-AOT strips symbols into a separate `Api.dbg`, which the SDK copies into the publish folder by
-default — so it ends up inside the container, several times larger than the binary it describes.
-`CopyOutputSymbolsToPublishDirectory=false` prevents that.
+AOT writes symbols to a separate `Api.dbg`, several times the size of the binary, and the SDK copies
+it into the publish folder, and so into the image. `CopyOutputSymbolsToPublishDirectory=false` stops
+that; filtering `ResolvedFileToPublish` does not, because the `.dbg` never passes through it. The
+symbols stay in `artifacts/bin/Api/release_linux-x64/native/`, and CI uploads them.
 
-Symbolication is not lost: the identical `Api.dbg` is still written to
-`artifacts/bin/Api/release_linux-x64/native/`, and CI uploads it as an artifact.
+## VerifyReferenceAotCompatibility is off on purpose
 
-Note that filtering `ResolvedFileToPublish` does **not** work for this — the native `.dbg` never
-passes through that item group. Use the property.
-
-## Why VerifyReferenceAotCompatibility is not set
-
-`VerifyReferenceAotCompatibility=true` verifies that every referenced assembly is *annotated* as
-AOT-compatible. It was tried and removed.
-
-Turned on, it produced **104 `IL3058` errors** — the entire ASP.NET Core shared framework
-(Antiforgery, Authentication, Authorization, Blazor components), plus Polly via
-`Microsoft.Extensions.Http.Resilience`. The same build publishes with **zero** AOT warnings.
-
-The two disagree because they measure different things. `VerifyReferenceAotCompatibility` checks an
-assembly-level *annotation*, so a library that is perfectly AOT-safe fails simply because its authors
-never added the attribute — which is the case for Polly and most of ASP.NET Core. The publish-time
-ILC analysis is *reachability*-based: it examines the code you actually call. That is both stricter
-where it matters and quiet where it does not, and it is what the CI gate already runs.
-
-The property is built for libraries with a small, curated set of package references. An ASP.NET Core
-app framework-references the whole shared framework, so it can only ever report the framework's
-missing annotations. Do not re-enable it expecting signal.
+It checks that each referenced assembly is *annotated* as AOT-compatible, and here it produced 104
+`IL3058` errors: most of the ASP.NET Core shared framework and Polly, none of which carry the
+annotation. The same build publishes with zero AOT warnings, because the publish-time analysis
+checks the code you actually reach. The property suits libraries with a few curated references, not
+an app that references the whole framework.
 
 ## Size tuning
 
-Not enabled by default. If you need a smaller binary:
-
-| Setting                             | Effect                                                  |
-| ----------------------------------- | ------------------------------------------------------- |
-| `OptimizationPreference=Size`       | modest                                                  |
-| `IlcFoldIdenticalMethodBodies=true` | small, safe                                             |
-| `UseSystemResourceKeys=true`        | strips exception message text                           |
-| `StackTraceSupport=false`           | largest single win, **degrades production diagnostics** |
-
-`StackTraceSupport=false` is deliberately not a default. Trading away crash diagnostics for a
-single-digit percentage of binary size is a bad bargain for most services, and an especially bad one
-to impose on everyone generating a project from a template.
+Off by default. `OptimizationPreference=Size` (modest), `IlcFoldIdenticalMethodBodies=true` (small,
+safe), `UseSystemResourceKeys=true` (drops exception message text). `StackTraceSupport=false` is the
+biggest win and is deliberately not a default: it costs production crash diagnostics.
 
 ## Prerequisites
 
-Native AOT shells out to `clang` and the system linker on Linux. Without them, publishing fails at
-the "Generating native code" step with a confusing linker error:
+AOT needs `clang` and the system linker. Without them, publish fails at "Generating native code"
+with a confusing linker error. The devcontainer and CI install both:
 
 ```bash
 sudo apt-get install -y clang zlib1g-dev
 ```
-
-The devcontainer and the CI workflow both install these.
