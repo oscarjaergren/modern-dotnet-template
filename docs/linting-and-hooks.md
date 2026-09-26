@@ -23,6 +23,18 @@ hook gets bypassed, and a bypassed hook is worse than none — it creates confid
 | commit-msg | conventional commit format                                                                                                                                                                | instant |
 | pre-push   | `dotnet build`, `dotnet test`, `dotnet format`, openapi.json drift, lychee link check                                                                                                     | seconds |
 
+### Secrets are scanned twice, and the difference matters
+
+The commit hook runs `gitleaks git --staged`, which scans the staged diff. That is the right scope
+for a hook — it is fast, and it stops the secret before it exists in history. It is also worth being
+precise about what it does not cover: with nothing staged it scans nothing, so running it in CI
+proves nothing, and it never sees a commit made with `--no-verify` or from a clone without hooks
+installed.
+
+CI therefore runs a second scan, `gitleaks git` over full history with `fetch-depth: 0`. History
+rather than the working tree, because a secret that was committed and later deleted still needs
+rotating, and only history says so.
+
 `dotnet format` is on pre-push rather than pre-commit deliberately: it loads the whole workspace even
 when given `--include`, which took the commit hook from 0.5s to 6s. Formatting is already fixed at
 edit time (below), so the check is a safety net rather than the mechanism.
