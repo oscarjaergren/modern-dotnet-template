@@ -1,13 +1,8 @@
-# Conventional Commits, enforced on every commit message.
 style = "conventional"
 
 # Types are lowercase (feat:), so the capitalisation rule is off.
 subject_capitalized = false
-subject_not_punctuated = true
 
 # Generous, but catches a subject line that should have been a body.
 subject_length = 90
 line_length = 100
-
-# Allow the merge commits GitHub creates.
-merge_commit = false

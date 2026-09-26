@@ -1,7 +1,7 @@
 # Contributing
 
 Anything added here is inherited by every project generated from this template, so the bar for
-additions is high. Setup is in the [README](README.md).
+additions is high. Setup is in the [README](../README.md).
 
 ## Pull requests
 
@@ -17,5 +17,5 @@ Fixes to the gates, CI or agent instructions; corrections where advice has gone 
 silent-failure traps for `AGENTS.md`.
 
 Not new libraries: the template's value is what it leaves out
-([adding-a-dependency.md](docs/adding-a-dependency.md)). If you think an exclusion is wrong, open an
-issue arguing against the relevant page rather than a PR adding the package.
+([adding-a-dependency.md](../docs/adding-a-dependency.md)). If you think an exclusion is wrong,
+open an issue arguing against the relevant page rather than a PR adding the package.
