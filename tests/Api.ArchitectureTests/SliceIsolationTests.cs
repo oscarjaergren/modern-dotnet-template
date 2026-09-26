@@ -24,8 +24,10 @@ public class SliceIsolationTests
     // namespaces included, is one slice named "Orders".
     private const string SlicePattern = $"{FeaturesRoot}.(*)";
 
+    // By name, not via a type: every slice here is meant to be replaceable, and the sample ones
+    // are meant to be deleted.
     private static readonly Architecture Architecture = new ArchLoader()
-        .LoadAssemblies(typeof(Features.Greetings.Greeter).Assembly)
+        .LoadAssemblies(System.Reflection.Assembly.Load("Api"))
         .Build();
 
     [Fact]
