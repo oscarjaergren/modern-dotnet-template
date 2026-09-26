@@ -14,7 +14,6 @@
       SDK container publishing, no Dockerfile. noble-chiseled is the runtime-deps base for AOT;
       no -aot image family exists for .NET 10. See docs/containers-and-deployment.md.
     -->
-    <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
     <ContainerFamily>noble-chiseled</ContainerFamily>
     <ContainerRepository>modern-dotnet-template-api</ContainerRepository>
     <ContainerImageTags>latest</ContainerImageTags>
@@ -31,7 +30,6 @@
 
   <PropertyGroup Label="OpenAPI">
     <!-- Generate openapi.json at build time so contract changes show up in the PR diff. -->
-    <OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
     <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>
     <OpenApiGenerateDocumentsOptions>--file-name openapi</OpenApiGenerateDocumentsOptions>
   </PropertyGroup>
@@ -44,11 +42,6 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
   </ItemGroup>
-
-  <ItemGroup Label="Container port">
-    <ContainerPort Include="8080" Type="tcp" />
-  </ItemGroup>
-
   <PropertyGroup Label="Keep debug symbols out of the runtime image">
     <!--
       Keeps AOT debug symbols (Api.dbg, several times the binary's size) out of the image. They are
@@ -67,10 +60,9 @@
     </ItemGroup>
   </Target>
 
-  <!-- Integration and unit tests need to see the endpoint types. -->
+  <!-- Unit tests reach internal slice logic directly. -->
   <ItemGroup>
     <InternalsVisibleTo Include="Api.UnitTests" />
-    <InternalsVisibleTo Include="Api.ArchitectureTests" />
   </ItemGroup>
 
 </Project>

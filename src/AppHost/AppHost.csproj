@@ -6,7 +6,6 @@
     <OutputType>Exe</OutputType>
     <!-- Aspire's templates opt in; without it the SDK warns ASPIRE010. -->
     <AspireUseCliBundle>true</AspireUseCliBundle>
-    <UserSecretsId>b3f1c6a2-4d8e-4a71-9c53-2e7f8a0d61b4</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
