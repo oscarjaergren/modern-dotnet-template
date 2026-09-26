@@ -169,8 +169,32 @@ jobs:
             exit 1
           }
 
-          echo "Image size (as distributed):"
-          docker save modern-dotnet-template-api:latest | wc -c | awk '{printf "  %.1f MB\n", $1/1048576}'
+          # Probes are mapped in every environment, and this container runs in Production —
+          # which is the environment where the Aspire default would have left them unmapped.
+          # See src/ServiceDefaults/Extensions.cs.
+          for probe in /alive /health; do
+            body=$(curl -fsS "http://127.0.0.1:8080$probe")
+            [ "$body" = "Healthy" ] || {
+              echo "::error::$probe returned '$body', expected exactly 'Healthy'."
+              echo "::error::A body with more than the aggregate status leaks the check list."
+              exit 1
+            }
+          done
+
+          # The README quotes an image size, and this is what keeps it true. It also guards a
+          # regression that already happened once: AOT symbols copied into the image added 48 MB.
+          # See src/Api/Api.csproj.
+          #
+          # Piped through gzip on purpose. What `docker save` emits depends on the daemon's image
+          # store: the containerd store writes compressed layers (~15 MB here), the classic store
+          # writes them uncompressed (~48 MB). Gzipping the stream measures compressed size — the
+          # size a registry actually serves — whichever store the runner has.
+          bytes=$(docker save modern-dotnet-template-api:latest | gzip -c | wc -c)
+          awk -v b="$bytes" 'BEGIN { printf "Image size (compressed): %.1f MB\n", b / 1048576 }'
+          if [ "$bytes" -gt 20971520 ]; then
+            echo "::error::Image is over the 20 MB compressed ceiling. Something large got into a layer."
+            exit 1
+          fi
 
       # Symbols are deliberately excluded from the image; keep them for post-mortem symbolication.
       - name: Upload debug symbols

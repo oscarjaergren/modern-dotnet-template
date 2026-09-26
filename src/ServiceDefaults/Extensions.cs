@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -99,25 +100,50 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Maps <c>/health</c> (readiness) and <c>/alive</c> (liveness).
+    /// Maps <c>/health</c> (readiness) and <c>/alive</c> (liveness), in every environment.
     /// </summary>
     /// <remarks>
-    /// Development-only by default, because exposing health detail publicly leaks information about
-    /// your dependencies. If you deploy somewhere that probes these paths (Kubernetes, ACA), you must
-    /// widen this — and secure it. See https://aka.ms/aspire/healthchecks.
+    /// The Aspire template maps these in Development only, on the grounds that health detail leaks
+    /// information about your dependencies. The leak is real but it comes from the *response body*,
+    /// not from the route: a detailed writer names every check and its status. So this template
+    /// keeps the routes and pins the writer instead.
+    /// <para>
+    /// <see cref="WriteStatusOnly"/> writes the aggregate status
+    /// and nothing else — <c>Healthy</c> or <c>Unhealthy</c>, no check names, no exception text. It
+    /// matches the framework default, but the framework's own writer is internal, so it is spelled
+    /// out here — which also makes swapping in a detailed writer a visible edit rather than an
+    /// accident.
+    /// </para>
+    /// <para>
+    /// The trade-off that remains: an unauthenticated caller can tell that the service is up. That
+    /// is the same thing every load balancer already knows, and it is the price of a container that
+    /// Kubernetes and Container Apps can actually probe. If you add a writer that reports per-check
+    /// detail, put it behind authentication or a separate port. See
+    /// <c>docs/containers-and-deployment.md</c> and https://aka.ms/aspire/healthchecks.
+    /// </para>
     /// </remarks>
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
+        app.MapHealthChecks(HealthEndpointPath, new HealthCheckOptions
         {
-            app.MapHealthChecks(HealthEndpointPath);
+            ResponseWriter = WriteStatusOnly,
+        });
 
-            app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live"),
-            });
-        }
+        app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live"),
+            ResponseWriter = WriteStatusOnly,
+        });
 
         return app;
+    }
+
+    // The aggregate status and nothing else. Deliberately not the detailed JSON writer: that one
+    // names every registered check, which is exactly the information a public probe should not
+    // hand out.
+    private static Task WriteStatusOnly(HttpContext context, HealthReport report)
+    {
+        context.Response.ContentType = "text/plain";
+        return context.Response.WriteAsync(report.Status.ToString(), context.RequestAborted);
     }
 }

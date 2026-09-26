@@ -14,7 +14,7 @@ internal static class PingEndpoint
         app.MapGet("/ping", Handle)
             .WithName("Ping")
             .WithSummary("Returns pong.")
-            .WithDescription("A trivial liveness check that exercises routing and JSON serialization.");
+            .WithDescription("Exercises routing and JSON serialization end to end. Not a health probe: use /alive and /health.");
 
         return app;
     }

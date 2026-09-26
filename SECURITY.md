@@ -19,8 +19,10 @@ beyond fixing the template and noting the change in the release notes.
 - **CodeQL** and **dependency review** run on pull requests.
 - **Renovate** keeps dependencies current.
 - **Chiseled container image**, running as a non-root user with no shell in the image.
-- **Health endpoints are Development-only** by default, because exposing dependency health publicly
-  leaks information. If you need them in production, widen and secure them deliberately.
+- **Health endpoints report status only.** `/health` and `/alive` are mapped in every environment so
+  a deployment can probe them, and their response body is the aggregate status with no check names
+  or exception text. Adding a detailed response writer republishes your dependency list — do it
+  behind authentication or on a separate port.
 - **The OpenAPI endpoint is Development-only** for the same reason; the document is committed to the
   repository instead.
 

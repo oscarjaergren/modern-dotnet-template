@@ -1,6 +1,6 @@
 @Api_HostAddress = http://localhost:5180
 
-### Liveness — proves the wiring
+### Ping — proves routing and serialization. Not a probe; see /alive and /health below.
 GET {{Api_HostAddress}}/ping
 Accept: application/json
 
@@ -29,6 +29,21 @@ Content-Type: application/json
   "name": "",
   "age": 500
 }
+
+### Greeting — reserved name, expect 409 ProblemDetails with a traceId
+# The worked example of a failure that is returned, not thrown. See docs/errors-and-failures.md.
+POST {{Api_HostAddress}}/greetings
+Content-Type: application/json
+
+{
+  "name": "admin"
+}
+
+### Liveness probe — body is the aggregate status only, never check names
+GET {{Api_HostAddress}}/alive
+
+### Readiness probe
+GET {{Api_HostAddress}}/health
 
 ### The OpenAPI document this API serves (also committed as src/Api/openapi.json)
 GET {{Api_HostAddress}}/openapi/v1.json

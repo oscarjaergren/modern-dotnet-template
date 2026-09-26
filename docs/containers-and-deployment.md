@@ -83,12 +83,22 @@ chart would be. `src/Api/openapi.json` is different: that is a contract, and it 
 
 ## Health endpoints
 
-`ServiceDefaults` maps `/health` and `/alive` **in Development only**, because exposing dependency
-health publicly leaks information about your infrastructure.
+`ServiceDefaults` maps `/health` (readiness) and `/alive` (liveness) **in every environment**, and
+the container gate in CI asserts both answer from the published image.
 
-If you deploy somewhere that probes those paths — Kubernetes, Container Apps, most load balancers —
-you must widen that in `src/ServiceDefaults/Extensions.cs` and secure it. This is the single most
-likely thing to surprise you on a first deployment.
+This departs from the Aspire template, which maps them in Development only. That default is aimed
+at a real leak — a detailed health response names every registered check, so it publishes your
+dependency list to anyone who asks — but the leak is in the *response body*, not the route.
+`Extensions.WriteStatusOnly` writes the aggregate status and nothing else: `Healthy` or
+`Unhealthy`, no check names, no exception text. Two integration tests assert that.
+
+What you are accepting: an unauthenticated caller can tell the service is up. That is what every
+load balancer in front of it already knows. What you get: a container Kubernetes and Container Apps
+can probe without editing the template first, which was the single most likely thing to surprise
+you on a first deployment.
+
+If you swap in a detailed writer — worth doing behind a boundary, since per-check detail is genuinely
+useful — put it on a separate port or behind authentication at the same time.
 
 The runtime `/openapi/v1.json` endpoint is Development-only for the same reason. The document is
 committed to the repository, so nothing needs to serve it in production.
