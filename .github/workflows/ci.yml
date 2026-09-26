@@ -113,12 +113,11 @@ jobs:
 
       # The committed OpenAPI document is the API contract. A build regenerates it; if that
       # produces a different file, the contract changed without being reviewed.
+      # The same script the pre-push hook runs, rather than a second implementation of the same
+      # check. It rebuilds and compares hashes, so it does not depend on an earlier step in this
+      # job having regenerated the document.
       - name: Verify OpenAPI contract is current
-        run: |
-          if ! git diff --exit-code -- src/Api/openapi.json; then
-            echo "::error file=src/Api/openapi.json::openapi.json is out of date. Run 'dotnet build' and commit the result."
-            exit 1
-          fi
+        run: scripts/check-openapi-drift.sh
 
   secret-scan:
     name: Secrets (full history)

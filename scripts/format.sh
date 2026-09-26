@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 #
-# The one place that knows how to format this repo.
+# The one place that knows how to format this repo. Fixing only — nothing here verifies.
 #
-# Called by two things that must agree:
-#   - .claude/hooks/format-cs.sh   (agent edit-time, fixes files)
-#   - .pre-commit-config.yaml      (git pre-commit, checks files)
+# Callers:
+#   - .claude/hooks/format-cs.sh   (agent edit-time, one file)
+#   - you, by hand
+#
+# Verification is prek's job, not this script's: .pre-commit-config.yaml runs `dprint check` and
+# `dotnet format --verify-no-changes` directly, with prek's own `files:` patterns doing the
+# dispatch. This script used to carry a --check mode for symmetry; nothing called it.
 #
 # Usage:
-#   scripts/format.sh [--check] [files...]
+#   scripts/format.sh [files...]
 #
-# With no files, operates on the whole repo. --check verifies without writing and exits non-zero
-# if anything is unformatted.
+# With no files, formats the whole repo.
 #
 # Two traps live here so they live nowhere else. Both were hit for real during development, and
 # both fail *silently* — the command exits 0 and formats nothing:
@@ -20,9 +23,6 @@
 #   2. `--no-restore` half-loads the workspace, so only some fixes apply. The rest then fail CI.
 #
 set -euo pipefail
-
-CHECK=0
-if [ "${1:-}" = "--check" ]; then CHECK=1; shift; fi
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
@@ -67,40 +67,15 @@ for f in "$@"; do
   esac
 done
 
-status=0
-
 # --- C#: dotnet format ------------------------------------------------------------------------
 if [ "$#" -eq 0 ] || [ "${#cs_files[@]}" -gt 0 ]; then
   require dotnet
   args=("$SOLUTION")
-  if [ "${#cs_files[@]}" -gt 0 ]; then
-    for f in "${cs_files[@]}"; do args+=(--include "$f"); done
-  fi
-  if [ "$CHECK" -eq 1 ]; then
-    if ! dotnet format "${args[@]}" --verify-no-changes; then
-      echo "error: C# formatting issues. Fix with: scripts/format.sh" >&2
-      status=1
-    fi
-  else
-    dotnet format "${args[@]}"
-  fi
+  for f in ${cs_files[@]+"${cs_files[@]}"}; do args+=(--include "$f"); done
+  dotnet format "${args[@]}"
 fi
 
 # --- markdown / json: dprint ------------------------------------------------------------------
 if [ "$#" -eq 0 ] || [ "${#other_files[@]}" -gt 0 ]; then
-  if [ "$CHECK" -eq 1 ]; then
-    if [ "${#other_files[@]}" -gt 0 ]; then
-      tool dprint check "${other_files[@]}" || { echo "error: formatting issues. Fix with: scripts/format.sh" >&2; status=1; }
-    else
-      tool dprint check || { echo "error: formatting issues. Fix with: scripts/format.sh" >&2; status=1; }
-    fi
-  else
-    if [ "${#other_files[@]}" -gt 0 ]; then
-      tool dprint fmt "${other_files[@]}"
-    else
-      tool dprint fmt
-    fi
-  fi
+  tool dprint fmt ${other_files[@]+"${other_files[@]}"}
 fi
-
-exit "$status"

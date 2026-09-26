@@ -88,13 +88,13 @@ pre-push hooks.
 
 So every pre-push hook needs a CI counterpart:
 
-| pre-push hook         | Covered in CI by                        |
-| --------------------- | --------------------------------------- |
-| `build`               | `dotnet build`                          |
-| `test`                | `dotnet test`                           |
-| `openapi-drift`       | the `git diff` contract check           |
-| `dotnet-format-check` | `dotnet format --verify-no-changes`     |
-| `lychee`              | `prek run lychee --hook-stage pre-push` |
+| pre-push hook         | Covered in CI by                          |
+| --------------------- | ----------------------------------------- |
+| `build`               | `dotnet build`                            |
+| `test`                | `dotnet test`                             |
+| `openapi-drift`       | the same `scripts/check-openapi-drift.sh` |
+| `dotnet-format-check` | `dotnet format --verify-no-changes`       |
+| `lychee`              | `prek run lychee --hook-stage pre-push`   |
 
 `lychee` was missed when the hooks were first written — it had no CI equivalent, so a
 `--no-verify` push would have shipped broken links with nothing downstream to catch them. **If you

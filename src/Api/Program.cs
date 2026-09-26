@@ -65,6 +65,3 @@ app.MapPing();
 app.MapGreetings();
 
 await app.RunAsync();
-
-/// <summary>Exposed so the integration tests can reference the entry point assembly.</summary>
-public partial class Program;

@@ -13,8 +13,7 @@
     "**/obj/**",
     "src/Api/openapi.json",
     "**/*-lock.json",
-    "mise.lock",
-    "**/*.md.bak"
+    "mise.lock"
   ],
   "plugins": [
     "npm:@dprint/json@0.23.0",
