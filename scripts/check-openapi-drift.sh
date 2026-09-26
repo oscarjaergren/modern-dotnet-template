@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 #
-# The committed openapi.json is the API contract. A build regenerates it; if the result differs
-# from what is committed, the contract changed without being reviewed.
-#
-# Used by the pre-push hook and by CI, so both check the same thing the same way.
+# The committed openapi.json is the API contract: fail if a build changes it.
 #
 set -euo pipefail
 

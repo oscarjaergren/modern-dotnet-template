@@ -1,7 +1,5 @@
-# EditorConfig — https://editorconfig.org
-# Drives both `dotnet format` and EnforceCodeStyleInBuild. Because TreatWarningsAsErrors is on,
-# any rule set to `warning` below is a build failure. That is intentional for the small curated
-# set here; everything else stays at `suggestion` so the template does not fight its consumers.
+# EditorConfig: drives dotnet format and EnforceCodeStyleInBuild. With warnings as errors,
+# every rule at `warning` fails the build; the rest stay `suggestion` so consumers aren't fought.
 root = true
 
 [*]
@@ -51,8 +49,7 @@ dotnet_diagnostic.IL2091.severity = error
 dotnet_diagnostic.IL3050.severity = error
 
 # --- naming ---
-# Order matters: the first matching rule wins. const and static readonly fields are
-# PascalCase by convention, so they must be matched before the private-instance-field rule.
+# First match wins, so const and static readonly (PascalCase) come before private fields.
 dotnet_naming_rule.const_fields_pascal.symbols = const_fields
 dotnet_naming_rule.const_fields_pascal.style = pascal_case
 dotnet_naming_rule.const_fields_pascal.severity = warning
@@ -77,40 +74,25 @@ dotnet_naming_style.pascal_case.capitalization = pascal_case
 dotnet_naming_style.underscore_prefix.capitalization = camel_case
 dotnet_naming_style.underscore_prefix.required_prefix = _
 
-# --- exceptions are for bugs, not control flow (docs/errors-and-failures.md) ---
-# A bare catch(Exception) that swallows and continues is how the discipline erodes in practice.
+# --- exceptions are for bugs; see docs/errors-and-failures.md ---
 dotnet_diagnostic.CA1031.severity = error
 
-# --- suppressions ---
-# A suppression here must name a reason that is architectural or a genuine tool conflict.
-# "It fires a lot" is not a reason — fix the code. CA1848 (LoggerMessage delegates) was
-# suppressed at one point and is deliberately not any more: the one log site in the API uses
-# the [LoggerMessage] source generator, which is also the right choice under Native AOT.
-#
-# CA2007 asks for ConfigureAwait(false) on every await. That rule exists for library authors
-# who may be called from a context with a SynchronizationContext. ASP.NET Core does not install
-# one, so ConfigureAwait(false) is a no-op here and would add noise to every await in the repo.
-# Microsoft's own guidance scopes this rule to libraries, not applications.
+# --- suppressions: each needs an architectural reason or a genuine tool conflict ---
+# CA2007: ConfigureAwait(false) matters only for libraries. ASP.NET Core has no
+# SynchronizationContext, so here it would be a no-op on every await.
 dotnet_diagnostic.CA2007.severity = none
 
-# MA0004 is Meziantou's version of the exact same rule, and gets the same answer for the same
-# reason. A concrete example of why this repo runs ONE third-party analyzer rather than three:
-# every additional vendor brings its own copy of rules you have already made a decision about,
-# and nobody resolves the conflicts for you. See docs/build-gates.md.
+# MA0004: Meziantou's copy of CA2007, suppressed for the same reason.
 dotnet_diagnostic.MA0004.severity = none
 
 [tests/**/*.cs]
-# CA1707 forbids underscores in member names. This repo deliberately diverges: test names are
-# written as sentences (Post_greetings_rejects_invalid_input) because xUnit's built-in assertions
-# give terse failure messages, so the name carries the explanation. A style decision, not laziness.
+# CA1707: test names are sentences with underscores; they carry the explanation that
+# xUnit's terse assertion messages don't.
 dotnet_diagnostic.CA1707.severity = none
-# CA1711 reserves the "Collection" suffix for ICollection implementations, which collides with
-# xUnit's own convention for [CollectionDefinition] classes. xUnit's convention wins in tests.
+# CA1711: xUnit collection classes end in Collection, which this rule reserves.
 dotnet_diagnostic.CA1711.severity = none
 
 [src/AppHost/AppHost.cs]
-# MA0048 wants the file named after its type, but top-level statements make the compiler
-# synthesise a `Program` class that was never written here. The name AppHost.cs is Aspire's
-# convention and is what every Aspire doc and template refers to; renaming to Program.cs to
-# satisfy an analyzer would make the repo harder to read, not easier.
+# MA0048: top-level statements synthesise a Program class. AppHost.cs is Aspire's naming
+# convention, kept for readability.
 dotnet_diagnostic.MA0048.severity = none

@@ -6,20 +6,14 @@ namespace Api.Infrastructure;
 /// Turns an unhandled exception into a ProblemDetails response instead of an empty 500.
 /// </summary>
 /// <remarks>
-/// This is the safety net, not the error-handling strategy. Expected failures should be returned
-/// as typed results from the endpoint — see docs/errors-and-failures.md. Anything reaching here is
-/// by definition a bug, so it is logged at Error and the client is told nothing about the cause.
-///
-/// Without this, ASP.NET Core returns a 500 with an empty body: no problem type, no trace id,
-/// nothing the caller can act on or correlate with your logs.
+/// A safety net for bugs; expected failures are returned from the endpoint. See
+/// docs/errors-and-failures.md.
 /// </remarks>
 internal sealed partial class ProblemDetailsExceptionHandler(
     IProblemDetailsService problemDetailsService,
     ILogger<ProblemDetailsExceptionHandler> logger) : IExceptionHandler
 {
-    // Source-generated logging: no boxing, no params array, no reflection, and the message
-    // template is validated at compile time. This is what CA1848 asks for, which is why that
-    // rule is not suppressed in this repo.
+    // Source-generated logging, as CA1848 asks: AOT-safe and checked at compile time.
     [LoggerMessage(
         EventId = 1000,
         Level = LogLevel.Error,
@@ -35,14 +29,12 @@ internal sealed partial class ProblemDetailsExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        // .NET 10 suppresses the middleware's own diagnostics once this returns true, so if this
-        // handler does not log, nothing does. See docs/errors-and-failures.md.
+        // Since .NET 10 the middleware stops logging once this returns true, so log here.
         LogUnhandledException(logger, exception, httpContext.Request.Method, httpContext.Request.Path);
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
-        // Deliberately generic: exception messages leak implementation detail, and a caller can do
-        // nothing with them anyway. The traceId is how a report gets tied back to the logs.
+        // Generic on purpose: exception messages leak internals. The traceId links to the logs.
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,

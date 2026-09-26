@@ -3,8 +3,7 @@
   <PropertyGroup>
     <IsAspireSharedProject>true</IsAspireSharedProject>
     <!--
-      Referenced by the Native-AOT API, so it must stay AOT-clean itself.
-      IsAotCompatible turns on the trim/AOT analyzers for this project's own code.
+      Referenced by the AOT API, so it must stay AOT-clean; this turns on the analyzers for it.
     -->
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>

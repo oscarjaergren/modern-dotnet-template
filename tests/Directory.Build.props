@@ -1,9 +1,6 @@
 <Project>
 
-  <!--
-    Directory-scoped build config for test projects only. A Directory.Build.props here would
-    normally *stop* MSBuild walking further up, so the root one is imported explicitly first.
-  -->
+  <!-- A Directory.Build.props here stops MSBuild walking up, so import the root one first. -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
   <PropertyGroup>
@@ -13,19 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!--
-      Global usings, declared once for every test project rather than repeated at the top of
-      every file. Add to this list rather than adding a using to fifty test files.
-    -->
+    <!-- Global usings for every test project. -->
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-      Enables the coverage flag on the Microsoft.Testing.Platform runner. Collected in CI and
-      rendered by ReportGenerator; deliberately not gated on a percentage, which rewards padding
-      the number rather than testing the thing. Shared here so all three test projects agree.
-    -->
+    <!-- Adds the coverage option to the test runner. Reported in CI, not gated. -->
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
 

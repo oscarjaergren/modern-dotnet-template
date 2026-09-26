@@ -1,29 +1,16 @@
 #!/usr/bin/env bash
 #
-# PostToolUse hook: format files as the agent edits them, so its output lands CI-clean.
+# PostToolUse hook: formats each file the agent edits (via scripts/format.sh), so its output
+# is CI-clean and the git hooks only have to verify. See docs/linting-and-hooks.md.
 #
-# This is the "fix at edit time" half of the design. Because formatting is already correct by the
-# time anything is committed, the git pre-commit hook only has to *verify* — it never rewrites
-# files mid-commit, so a commit never contains content the author did not see.
-# See docs/linting-and-hooks.md.
-#
-# The formatting logic itself lives in scripts/format.sh. The git hooks do not call it — they run
-# `dprint check` and `dotnet format --verify-no-changes` directly, because they verify rather than
-# fix. This is the only automated caller.
-#
-# Exit codes follow Claude Code's PostToolUse contract, which is worth knowing because the obvious
-# assumption is wrong. A PostToolUse hook cannot block anything — the edit has already happened.
-# Exit 2 does not stop the agent; it shows stderr *to the agent*, so it can react. That makes
-# exit 2 the right answer for a real failure: swallowing it with `|| true` would leave the agent
-# believing its output was formatted when it was not, which is the one outcome this hook exists
-# to prevent. Exit 0 is reserved for "nothing to do here".
+# A PostToolUse hook cannot block; the edit has already happened. Exit 2 shows stderr to the
+# agent, so a real failure uses it rather than leaving the agent to assume its output is
+# formatted. Exit 0 means there was nothing to do.
 set -uo pipefail
 
 payload=$(cat)
 
-# jq, resolved through mise so the pinned version wins, falling back to PATH. Not Python: a .NET
-# repo should not need a Python interpreter to format a file, and the old fallback here was
-# `|| exit 0`, which meant a machine without Python silently formatted nothing.
+# jq via mise, so the pinned version runs, falling back to PATH.
 jq_bin() {
   if command -v mise >/dev/null 2>&1 && mise which jq >/dev/null 2>&1; then
     mise exec -- jq "$@"

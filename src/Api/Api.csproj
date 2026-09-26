@@ -2,9 +2,8 @@
 
   <PropertyGroup Label="Native AOT">
     <!--
-      Native AOT is on by default. It is trivial to keep true while there is no data layer,
-      and it is far easier to remove now than to retrofit later.
-      To remove it, see docs/native-aot.md — it is a documented exit.
+      Native AOT is on by default: cheap without a data layer, and removal is documented in
+      docs/native-aot.md.
     -->
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -12,11 +11,8 @@
 
   <PropertyGroup Label="Container">
     <!--
-      SDK container publishing — there is no Dockerfile in this repo by design.
-      `dotnet publish -c Release /t:PublishContainer` produces the image.
-      NOTE: there is no `-aot` base image family for .NET 10 (those existed only for
-      .NET 8/9 on Alpine). `noble-chiseled` is the correct runtime-deps base for an AOT app.
-      See docs/containers-and-deployment.md.
+      SDK container publishing, no Dockerfile. noble-chiseled is the runtime-deps base for AOT;
+      no -aot image family exists for .NET 10. See docs/containers-and-deployment.md.
     -->
     <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
     <ContainerFamily>noble-chiseled</ContainerFamily>
@@ -26,16 +22,9 @@
 
   <PropertyGroup Label="Validation">
     <!--
-      Required to turn on .NET 10's built-in minimal API validation. AddValidation() in Program.cs
-      is NOT enough on its own: the generator emits an interceptor, but the compiler ignores it
-      unless its namespace is listed here — so every request validates successfully, a silent 200
-      where you expected a 400.
-
-      The namespace is Microsoft.Extensions.Validation.Generated. Many blog posts still say
-      Microsoft.AspNetCore.Http.Validation.Generated, which was the .NET 10 preview name and
-      silently does nothing. Verify against the emitted ValidatableInfoResolver.g.cs, not a post.
-
-      Api.IntegrationTests asserts the 400s precisely so this cannot regress unnoticed.
+      Required for .NET 10 validation: without this namespace the compiler ignores the generated
+      interceptor and invalid requests silently return 200. The preview-era name in older posts,
+      Microsoft.AspNetCore.Http.Validation.Generated, does nothing. Integration tests assert the 400s.
     -->
     <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.Extensions.Validation.Generated</InterceptorsNamespaces>
   </PropertyGroup>
@@ -62,13 +51,8 @@
 
   <PropertyGroup Label="Keep debug symbols out of the runtime image">
     <!--
-      Native AOT strips symbols into a separate Api.dbg. By default the SDK copies it into the
-      publish folder, so it gets baked into the container: 48 MB of symbols on top of a 22 MB
-      binary and a 14 MB chiseled base — the image is 3x bigger than the thing it runs.
-
-      This is the supported switch (it gates the _CopyAotSymbols target). Symbolication is not
-      lost: the identical Api.dbg is still written to
-      artifacts/bin/Api/release_linux-x64/native/ (the artifacts output layout), which CI archives.
+      Keeps AOT debug symbols (Api.dbg, several times the binary's size) out of the image. They are
+      still written to artifacts/bin/Api/release_linux-x64/native/, which CI uploads.
     -->
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>

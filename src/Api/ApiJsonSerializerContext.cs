@@ -6,14 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Api;
 
 /// <summary>
-/// System.Text.Json source-generation context. Under Native AOT there is no reflection fallback:
-/// a type that is not listed here fails at runtime, not at build time.
+/// Every type that crosses the wire. Under Native AOT a type missing here fails at runtime, not
+/// build. The one shared file each new slice touches.
 /// </summary>
-/// <remarks>
-/// When you add a slice, add its request and response types here. This is the one place in the
-/// template where slices touch a shared file — see docs/native-aot.md for why source generation
-/// is mandatory here.
-/// </remarks>
 [JsonSerializable(typeof(PingResponse))]
 [JsonSerializable(typeof(GreetingRequest))]
 [JsonSerializable(typeof(GreetingResponse))]

@@ -35,9 +35,7 @@ jobs:
           cache: true
           cache-dependency-path: Directory.Packages.props
 
-      # The identical hook definitions developers run locally. A check added to
-      # .pre-commit-config.yaml is enforced here automatically, and `git commit --no-verify`
-      # cannot ship past it. See docs/linting-and-hooks.md.
+      # So a commit made with --no-verify still cannot ship past the hooks.
       - name: Setup lint toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
 
@@ -51,27 +49,14 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      # Unit, architecture, and Aspire integration tests. No container runtime is required:
-      # the AppHost has only a project resource. Adding a database changes that —
-      # see docs/adding-a-database.md.
-      # NOT `dotnet test --nologo`. The Microsoft.Testing.Platform runner rejects that flag by
-      # silently matching zero test modules, reports "Zero tests ran", and exits in a way that
-      # looks like a pass. See .pre-commit-config.yaml.
+      # No --nologo: this test runner then matches zero modules and passes (see .pre-commit-config).
+      # No container runtime is needed until a database is added.
       - name: Test
         run: dotnet test --no-build --configuration Release -- --coverage --coverage-output-format cobertura
 
-      # Each test project writes its own report over the same assemblies, so a single file reads
-      # far lower than reality — the unit tests alone "cover" 2% of Api. ReportGenerator merges
-      # all three. classfilters drops source-generated code (routing, OpenAPI, validation), which
-      # is not code anyone here wrote or can test directly.
-      #
-      # Reported, never gated: a percentage measures which lines a test touched, not whether it
-      # asserted anything, and the cheapest way to raise it is a test that asserts nothing.
-      #
-      # The action, not a local tool, on purpose. With two tools in .config/dotnet-tools.json,
-      # `dotnet tool restore` fails on any machine with a fresh tool cache — it credits the second
-      # tool with the first tool's command (dotnet/sdk#53783). That broke this job and the
-      # devcontainer's first-time setup. Keep the manifest to one tool until the SDK is fixed.
+      # Merges the three per-project reports, which each understate alone, and drops generated code.
+      # Reported, never gated. An action, not a local tool: a second tool in dotnet-tools.json
+      # breaks `dotnet tool restore` on fresh machines (dotnet/sdk#53783).
       - name: Coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # 5.5.11
         with:
@@ -94,15 +79,12 @@ jobs:
       - name: Verify formatting
         run: dotnet format --verify-no-changes
 
-      # lychee runs at the pre-push stage locally, and `prek run --all-files` above only runs the
-      # pre-commit stage — so without this, `git push --no-verify` would skip link checking and
-      # nothing downstream would ever catch a broken link. Invoked through prek so the hook
-      # definition stays the single source of truth.
+      # lychee is a pre-push hook, which `prek run --all-files` skips; without this step
+      # `git push --no-verify` could ship broken links.
       - name: Check links
         run: prek run lychee --all-files --hook-stage pre-push
 
-      # NuGet audit (NU1903, a build error here) covers direct and centrally-pinned packages.
-      # This walks the full transitive graph, which audit does not.
+      # NuGet audit covers direct and pinned packages; this walks the full transitive graph.
       - name: Scan transitive dependencies for advisories
         run: |
           set -euo pipefail
@@ -113,11 +95,6 @@ jobs:
             exit 1
           fi
 
-      # The committed OpenAPI document is the API contract. A build regenerates it; if that
-      # produces a different file, the contract changed without being reviewed.
-      # The same script the pre-push hook runs, rather than a second implementation of the same
-      # check. It rebuilds and compares hashes, so it does not depend on an earlier step in this
-      # job having regenerated the document.
       - name: Verify OpenAPI contract is current
         run: scripts/check-openapi-drift.sh
 
@@ -125,10 +102,8 @@ jobs:
     name: Secrets (full history)
     runs-on: ubuntu-latest
     steps:
-      # fetch-depth: 0 is the point of this job. The pre-commit hook runs `gitleaks git --staged`,
-      # which scans a staged diff and therefore scans nothing in CI, where nothing is staged.
-      # Without a history scan the secret gate would be enforced only on machines that happen to
-      # have the hook installed.
+      # Full history: the commit hook only scans staged changes, so it sees nothing here, and a
+      # secret committed then deleted still needs rotating.
       - name: Checkout full history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -137,8 +112,6 @@ jobs:
       - name: Setup lint toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
 
-      # Scans every commit, not just the tip: a secret that was committed and later deleted still
-      # needs rotating, and only history says so.
       - name: Scan history for secrets
         run: mise exec -- gitleaks git --redact --no-banner --verbose
 
@@ -160,12 +133,11 @@ jobs:
       - name: Install Native AOT prerequisites
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev
 
-      # This is the gate that keeps the AOT claim true as the template evolves: any trim or
-      # AOT warning is an error via Directory.Build.props. See docs/native-aot.md.
+      # Any trim or AOT warning fails this (Directory.Build.props).
       - name: Publish container image
         run: dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer
 
-      # Publishing successfully proves nothing — AOT failures surface at runtime. Actually run it.
+      # A clean AOT publish proves little; failures show at runtime. Run it.
       - name: Verify the image serves traffic
         run: |
           set -euo pipefail
@@ -179,8 +151,7 @@ jobs:
             -H 'Content-Type: application/json' -d '{"name":"Ada","age":36}' \
             | tee /dev/stderr | grep -q 'Hello, Ada'
 
-          # Validation must reject bad input. This asserts the .NET 10 validation source generator
-          # is actually wired up — it fails silently with a 200 when it is not. See AGENTS.md.
+          # A 400 proves the validation generator is wired up; broken, it silently returns 200.
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/greetings \
             -H 'Content-Type: application/json' -d '{"name":"","age":500}')
           if [ "$code" != "400" ]; then
@@ -188,9 +159,7 @@ jobs:
             exit 1
           fi
 
-          # An expected failure returned as a value, not thrown. Also proves ProblemDetails
-          # serializes under Native AOT, which needs an ApiJsonSerializerContext entry and would
-          # otherwise fail at runtime rather than at build. See docs/errors-and-failures.md.
+          # A 409 with a traceId also proves ProblemDetails serialises under AOT.
           conflict=$(curl -s -o /tmp/conflict.json -w '%{http_code}' -X POST http://127.0.0.1:8080/greetings \
             -H 'Content-Type: application/json' -d '{"name":"admin"}')
           if [ "$conflict" != "409" ]; then
@@ -202,9 +171,7 @@ jobs:
             exit 1
           }
 
-          # Probes are mapped in every environment, and this container runs in Production —
-          # which is the environment where the Aspire default would have left them unmapped.
-          # See src/ServiceDefaults/Extensions.cs.
+          # Probes must answer in Production, where the Aspire default leaves them unmapped.
           for probe in /alive /health; do
             body=$(curl -fsS "http://127.0.0.1:8080$probe")
             [ "$body" = "Healthy" ] || {
@@ -214,14 +181,8 @@ jobs:
             }
           done
 
-          # The README quotes an image size, and this is what keeps it true. It also guards a
-          # regression that already happened once: AOT symbols copied into the image added 48 MB.
-          # See src/Api/Api.csproj.
-          #
-          # Piped through gzip on purpose. What `docker save` emits depends on the daemon's image
-          # store: the containerd store writes compressed layers (~15 MB here), the classic store
-          # writes them uncompressed (~48 MB). Gzipping the stream measures compressed size — the
-          # size a registry actually serves — whichever store the runner has.
+          # Keeps the README's size claim honest, and catches AOT symbols leaking into the image.
+          # Gzipped, so it measures compressed size whichever Docker image store the runner uses.
           bytes=$(docker save modern-dotnet-template-api:latest | gzip -c | wc -c)
           awk -v b="$bytes" 'BEGIN { printf "Image size (compressed): %.1f MB\n", b / 1048576 }'
           if [ "$bytes" -gt 20971520 ]; then

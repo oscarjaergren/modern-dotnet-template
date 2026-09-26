@@ -1,9 +1,7 @@
 # Conventional Commits, enforced on every commit message.
-# CONTRIBUTING.md has claimed this convention since the first commit; this is what makes it true.
 style = "conventional"
 
-# The conventional-commit type is lowercase by design ("feat:", not "Feat:"), so committed's
-# default capitalisation rule has to be off or it rejects every valid message.
+# Types are lowercase (feat:), so the capitalisation rule is off.
 subject_capitalized = false
 subject_not_punctuated = true
 
