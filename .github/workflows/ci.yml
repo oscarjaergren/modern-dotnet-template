@@ -122,7 +122,7 @@ jobs:
       - name: Verify the image serves traffic
         run: |
           set -euo pipefail
-          cid=$(docker run -d -p 8080:8080 modern-dotnet-template-api:latest)
+          cid=$(docker run -d -p 8080:8080 api:latest)
           trap 'docker logs "$cid" || true; docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
 
           curl -fsS --retry 30 --retry-all-errors --retry-delay 1 --retry-connrefused \
@@ -164,7 +164,7 @@ jobs:
 
           # Keeps the README's size claim honest, and catches AOT symbols leaking into the image.
           # Gzipped, so it measures compressed size whichever Docker image store the runner uses.
-          bytes=$(docker save modern-dotnet-template-api:latest | gzip -c | wc -c)
+          bytes=$(docker save api:latest | gzip -c | wc -c)
           awk -v b="$bytes" 'BEGIN { printf "Image size (compressed): %.1f MB\n", b / 1048576 }'
           if [ "$bytes" -gt 20971520 ]; then
             echo "::error::Image is over the 20 MB compressed ceiling. Something large got into a layer."

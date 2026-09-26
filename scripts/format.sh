@@ -13,8 +13,6 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-SOLUTION="ModernDotnetTemplate.slnx"
-
 # The pinned version via `mise exec`, since editor hook environments often lack mise shims.
 # Falls back to PATH, then fails loudly: a formatter that silently does nothing is worse.
 tool() {
@@ -53,9 +51,9 @@ done
 # --- C#: dotnet format ------------------------------------------------------------------------
 if [ "$#" -eq 0 ] || [ "${#cs_files[@]}" -gt 0 ]; then
   require dotnet
-  args=("$SOLUTION")
+  args=()
   for f in ${cs_files[@]+"${cs_files[@]}"}; do args+=(--include "$f"); done
-  dotnet format "${args[@]}"
+  dotnet format ${args[@]+"${args[@]}"}
 fi
 
 # --- markdown / json: dprint ------------------------------------------------------------------

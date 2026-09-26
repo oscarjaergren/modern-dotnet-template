@@ -15,8 +15,6 @@
       no -aot image family exists for .NET 10. See docs/containers-and-deployment.md.
     -->
     <ContainerFamily>noble-chiseled</ContainerFamily>
-    <ContainerRepository>modern-dotnet-template-api</ContainerRepository>
-    <ContainerImageTags>latest</ContainerImageTags>
   </PropertyGroup>
 
   <PropertyGroup Label="Validation">
