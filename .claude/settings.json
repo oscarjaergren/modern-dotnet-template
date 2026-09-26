@@ -1,5 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(*.pfx)",
+      "Read(*.user)",
+      "Read(./artifacts/**)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {

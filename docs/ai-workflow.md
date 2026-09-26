@@ -3,12 +3,11 @@
 **Read this if:** you are working on this repo with a coding agent, or your token bill is higher
 than you expected.
 
-Config-first. The reasoning behind the tool choices is in
-[token-saving-tools.md](token-saving-tools.md); this page is what to actually set.
+What to **set once**, what to do **each session**, what to check **when something looks wrong**, and
+the two traps that cost real money. Why any of it works is in
+[token-saving-tools.md](token-saving-tools.md).
 
 ## Where the money goes
-
-Measured breakdown of a typical agentic session:
 
 | Category                                                                | Share of spend |
 | ----------------------------------------------------------------------- | -------------- |
@@ -17,13 +16,17 @@ Measured breakdown of a typical agentic session:
 | Reasoning tokens                                                        | 10–30%         |
 | Visible output                                                          | **1–10%**      |
 
-Two consequences that drive everything below: compressing what the agent *says* is capped at ~5%,
-and **MCP tool definitions are re-sent on every turn** — each connected server can add up to
-**18,000 tokens per turn** before you type anything.
+Everything below follows from the last row: what the agent *says* is not the bill. What gets re-sent
+on every turn is.
 
-## settings.json
+## Set once
 
 *Claude-specific.* Every key verified against the settings reference.
+
+### Yours: `~/.claude/settings.json`
+
+These are personal. A project file setting `model` or `MAX_THINKING_TOKENS` would override the
+choice of everyone who clones the repo, which is why this template ships neither.
 
 ```jsonc
 {
@@ -32,9 +35,8 @@ and **MCP tool definitions are re-sent on every turn** — each connected server
   // Mid-tier default. The top tier becomes a per-task decision, not a standing cost.
   "model": "sonnet",
 
-  // Range is 100000-1000000 TOKENS. Default is model-tuned and fires around 93% capacity,
-  // and each compaction pass itself costs 100-200k tokens. Compacting earlier and more often
-  // trades those passes against carrying a large prefix — see the trade-off below.
+  // TOKENS, not a percentage — range 100000-1000000. The default is model-tuned and fires
+  // around 93% capacity. Setting this lower IS "compact earlier", applied automatically.
   "autoCompactEnabled": true,
   "autoCompactWindow": 300000,
 
@@ -53,49 +55,37 @@ and **MCP tool definitions are re-sent on every turn** — each connected server
 }
 ```
 
-### Compaction: configure it, do not police it
+### The repo's: `.claude/settings.json`
 
-A lot of advice says to watch a context gauge and run `/compact` manually at 60–70%. Ignore that.
-It requires constant vigilance, it interrupts whatever you were thinking about, and a practice that
-depends on remembering is a practice that fails.
+**There is no `.claudeignore`.** Plenty of advice says to write one; Claude Code has never read such
+a file. Exclusion is a `Read` deny rule, and this repo ships them:
 
-**`autoCompactWindow` is an absolute token count, not a percentage.** Setting it to `300000` *is*
-"compact earlier", applied automatically, with no gauge-watching. That is the whole fix.
-
-What is worth doing by hand is **`/clear` when you switch to unrelated work**. It is tied to a
-natural boundary you already notice — you finished the thing — rather than to a number you have to
-monitor. It is also strictly cheaper than compaction: no summarisation pass at all, and the next
-task starts on a clean, cacheable prefix.
-
-The trade-off in the setting itself is real: compaction rewrites the prefix, so it **invalidates the
-prompt cache**, and each pass costs 100–200k tokens. Long sessions win, because you stop carrying a
-huge prefix on every turn. Short sessions lose, because you paid to reset a cache you were about to
-abandon anyway. If your sessions are short and task-scoped, leave the default alone and lean on
-`/clear`.
-
-Reserve manual `/compact` for the one case configuration cannot cover: you are mid-task, context is
-filling, and you specifically want to control what survives the summary.
-
-## `.claudeignore`
-
-Keeps generated and vendored files out of reads and searches entirely — the cheapest possible fix,
-since a file never read costs nothing.
-
-```
-artifacts/
-bin/
-obj/
-*.user
-*.log
+```jsonc
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)", // a bare filename matches at any depth
+      "Read(*.pfx)",
+      "Read(*.user)",
+      "Read(./artifacts/**)" // ./ anchors to this settings file's directory
+    ]
+  }
+}
 ```
 
-This repo needs little else: `UseArtifactsOutput` already puts every build output under
-`artifacts/`, so one line covers what would otherwise be dozens of `bin/` and `obj/` folders.
+Rules use [gitignore pattern syntax](https://git-scm.com/docs/gitignore): `*` within a path segment,
+`**` across directories. `UseArtifactsOutput` puts every build output under `artifacts/`, so one
+rule covers what would otherwise be dozens of `bin/` and `obj/` folders — and a file never read
+costs nothing, which is the cheapest saving available.
 
-## Model routing: the actual agent file
+Know what these are not: deny rules apply to the built-in file tools on a best-effort basis, and
+**do not stop a Bash command that opens the file itself**. They keep noise out of the window and
+secrets out of casual reads. For an actual boundary, use the sandbox.
 
-The largest single lever, and it is one line of frontmatter. `.claude/agents/codebase-locator.md`
-in this repo is the worked example — a "where is X?" agent on the cheapest tier:
+### Agent frontmatter
+
+The largest single lever is one line of YAML. `.claude/agents/codebase-locator.md` is the worked
+example — a "where is X?" agent on the cheapest tier:
 
 ```yaml
 ---
@@ -107,59 +97,70 @@ isolation: worktree   # only needed for agents that WRITE
 ---
 ```
 
-Two savings at once: **`model: haiku`** because locating needs no judgement, and **its own context
-window** so the main thread never pays for the files it opened — it receives only the summary.
+`model: haiku` because locating needs no judgement, and a subagent gets **its own context window**,
+so the main thread pays only for the summary, never for the files that were opened. Match the tier
+to the judgement required: locating, inventorying and mechanical edits are Haiku work; reviewing is
+Sonnet work; architecture is worth the top tier.
 
-The rule: match the tier to the judgement required. Locating, inventorying and mechanical edits are
-Haiku work. Reviewing is Sonnet work. Architecture is worth the top tier.
+`isolation: worktree` goes on every agent that writes. Two agents open the same file, both write
+back, and **the second write silently erases the first** — no error, nothing in the diff. It costs
+nothing, so the only reason to omit it is a read-only agent. Without built-in support:
+`git worktree add ../feature-x -b feature-x`. Practical ceiling is 4–8 concurrent, past which you
+are bottlenecked on reviewing output.
 
-## Worktrees, for anything that writes
+## Each session
 
-Two agents open the same file, both write back, **the second write silently erases the first**. No
-error, nothing in the diff.
+| Do this                       | When                                                                 |
+| ----------------------------- | -------------------------------------------------------------------- |
+| Disconnect unused MCP servers | Start of a session. Tool selection degrades past 30–50 loaded tools. |
+| Plan mode                     | Before anything complex. A wrong guess means re-reading everything.  |
+| `/model`                      | Dropping a tier for a mechanical stretch.                            |
+| `/clear`, or a new session    | Switching to unrelated work. The two are the same thing — see below. |
+| `/compact`                    | Only mid-task, when you want control over what survives the summary. |
 
-```yaml
-isolation: worktree
-```
+## When something looks wrong
 
-Put it on every code-writing subagent — it costs nothing. Read-only agents do not need it. Without
-built-in support: `git worktree add ../feature-x -b feature-x`. Practical ceiling is 4–8 concurrent;
-past that you are bottlenecked on reviewing output.
+| Check                           | Tells you                                                  |
+| ------------------------------- | ---------------------------------------------------------- |
+| `/context`                      | What is occupying the window right now.                    |
+| `/cost`                         | Tokens and estimated spend for this session.               |
+| Statusline gauge (`claude-hud`) | The window filling, live.                                  |
+| `--verbose` for a working day   | What normal looks like — measure before changing anything. |
+| `console.anthropic.com` → Usage | History across sessions.                                   |
 
-## Trim MCP servers
+A healthy long session shows the **cache-read ratio rising while per-turn input stays flat**. If
+per-turn input climbs with the conversation, something is defeating the cache.
 
-Each connected MCP server injects its tool definitions into **every turn** — up to 18,000 tokens
-each. Three idle servers can cost more per turn than the file you are editing.
+`/insights` is the odd one out, and worth a run every few weeks. It reads back your own transcript
+history and writes `~/.claude/usage-data/report.html`: how you actually use the tool, where sessions
+go wrong, features you have never touched, and copyable `AGENTS.md` rules derived from the friction
+it found. It only sees sessions that were recorded — on a fresh install it reports zeros.
 
-Disconnect the ones you are not using this session. This is the highest-value thing on the page that
-costs nothing and takes ten seconds.
+## Two traps
 
-## Commands worth the muscle memory
+**Compaction is a setting, not a vigil.** Advice to watch a gauge and `/compact` at 60–70% fails for
+the same reason `dotnet format` came off the pre-commit hook: a practice that depends on remembering
+does not happen. `autoCompactWindow` does it for you. The trade-off is real, though — each pass
+costs 100–200k tokens and rewrites the prefix, **invalidating the prompt cache**. Long sessions win,
+because you stop carrying a huge prefix on every turn; short task-scoped sessions lose, because you
+paid to reset a cache you were about to abandon. If yours are short, leave the default alone and end
+sessions instead.
 
-| Command    | When                                                          |
-| ---------- | ------------------------------------------------------------- |
-| `/clear`   | Switching to unrelated work. Cheapest possible reset.         |
-| `/compact` | Deliberately, at 60–70% context, rather than waiting for 93%. |
-| `/cost`    | End of a session — token count and estimated spend.           |
-| `/model`   | Drop to a cheaper tier for mechanical stretches.              |
-| `/context` | See what is actually occupying the window.                    |
+`/clear` is worth being blunt about: it is identical to opening a new session, not a technique. What
+matters is not carrying a finished task into the next one, where it is re-sent every turn and then
+paid for again in a pass that summarises work you are done with.
 
-Plan mode before a complex task is a real saving, not ceremony: planning first avoids the expensive
-failure mode of an agent exploring, guessing wrong, and re-reading everything.
-
-## Measure before optimising
-
-Do not tune against estimates.
-
-- `/cost` per session; `console.anthropic.com` → Usage for history.
-- Run with `--verbose` for one full working day before changing anything.
-- Watch the **cache-read ratio** rise while per-turn input stays flat as the conversation grows.
-  That is what a healthy long session looks like.
-- A statusline context gauge (`claude-hud` and similar) shows live token count and cost.
+**A proxy turns off tool deferral.** Claude Code withholds MCP tool definitions and loads them on
+demand — tool search, on by default from the 4.5 generation — so idle servers cost close to nothing.
+It **disables itself when `ANTHROPIC_BASE_URL` points at a non-first-party host**, because most
+proxies do not forward `tool_reference` blocks. Any token-saving proxy or model router in front of
+the agent therefore re-inflates every definition onto every turn, and `ENABLE_TOOL_SEARCH=true` does
+not rescue it — those requests fail instead. 50 loaded tools run 10–20k tokens before you type
+anything. See [token-saving-tools.md](token-saving-tools.md).
 
 ## What this repo does structurally
 
-Not settings — architecture, and it is why the agent workflow here is cheap by default:
+Not settings — architecture, and why the agent workflow here is cheap by default:
 
 - **Layered docs.** `AGENTS.md` always loaded; skills on task match; `docs/` on demand via an index.
   See [documentation-approach.md](documentation-approach.md).
@@ -167,9 +168,3 @@ Not settings — architecture, and it is why the agent workflow here is cheap by
 - **Fix at edit time, verify at commit time**, so hooks rarely reject and cost a round trip. See
   [linting-and-hooks.md](linting-and-hooks.md).
 - **Everything build-generated under `artifacts/`**, so it is trivially ignorable.
-
-## Before installing a token-saving tool
-
-Ask **which layer it works at** — that bounds the return before you install anything. Measured
-results, including one worth trying and one to avoid, are in
-[token-saving-tools.md](token-saving-tools.md).
