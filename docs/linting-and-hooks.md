@@ -71,7 +71,9 @@ prek run --hook-stage pre-push   # the slow ones
 | `dotnet-format-check` | `dotnet format --verify-no-changes`       |
 | `lychee`              | `prek run lychee --hook-stage pre-push`   |
 
-Add a pre-push hook and its CI step in the same commit, or the check is advisory.
+Add a pre-push hook and its CI step in the same commit, or the check is advisory. The commit-msg
+hook's counterpart is the PR-title check: squash merging makes the title the commit on `main`, so
+CI runs it through the same `committed.toml`.
 
 ## Adding a check
 

@@ -1,7 +1,7 @@
 # AI workflow and token cost
 
-**Read this if:** you are working here with a coding agent, or your token bill is higher than
-expected. Why these choices work: [token-saving-tools.md](token-saving-tools.md).
+**Read this if:** you are working here with a coding agent, weighing a token-saving tool, or your
+token bill is higher than expected.
 
 ## Where the money goes
 
@@ -105,7 +105,30 @@ window is re-sent every turn, then paid for again when it is summarised.
 on by default), so idle servers cost almost nothing. It turns itself off when `ANTHROPIC_BASE_URL`
 points at a non-first-party host, so a token-saving proxy re-sends every definition every turn, and
 forcing `ENABLE_TOOL_SEARCH=true` makes those requests fail. Fifty loaded tools cost 10–20k tokens
-before you type.
+before you type. Where a tool offers a library or MCP mode instead of a proxy, use that.
+
+## Token-saving tools
+
+None is installed: a proxy or plugin is a personal choice, not a property of a .NET codebase. Before
+adding one, ask which layer it works at, because that caps what it can save:
+
+| Layer                          | Ceiling      |
+| ------------------------------ | ------------ |
+| Agent prose output             | ~5% of spend |
+| One command's output           | small        |
+| **Re-sent context**            | **large**    |
+| **Not sending it** (retrieval) | **largest**  |
+
+A production replay over 614 million tokens and $926 of spend measured three tools. Headroom
+(re-sent context) saved **2.8%**, RTK (shell output) 0.5%, and CAVEMAN (prose) 0.4%. An independent
+SkillsBench A/B (JetBrains; 87 tasks, three trials) found CAVEMAN saves 8.5% of output tokens
+against an advertised 65%, which only squares with 0.4% of spend if output is about 5% of the bill.
+It also found RTK **costs 7.6% more** at low reasoning effort; in the replay it drove 13.8% more
+turns, each re-sending the whole prefix. Compression that causes a retry costs more than it saves.
+
+To judge the next one: compare invoices over a week, not token estimates; watch the cache-read ratio
+and per-turn input; run a fixed task set more than once; and distrust self-reported savings. One
+tool claimed 96 million tokens saved while the invoice rose.
 
 ## What the repo does structurally
 

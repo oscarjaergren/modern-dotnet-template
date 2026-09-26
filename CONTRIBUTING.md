@@ -6,8 +6,8 @@ additions is high. Setup is in the [README](README.md).
 ## Pull requests
 
 - `main` accepts squash-merged pull requests with every check green.
-- The PR title becomes the commit on `main`, so write it as a conventional commit: `feat:`, `fix:`,
-  `docs:`, `chore:`.
+- The PR title becomes the commit on `main`, so it must be a conventional commit (`feat:`, `fix:`,
+  `docs:`, `chore:`). A required check enforces it with the same rules as the commit-msg hook.
 - Change behaviour and the `docs/` page that describes it in the same PR.
 - A changed `src/Api/openapi.json` means a changed API contract; say so in the description.
 

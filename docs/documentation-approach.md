@@ -1,7 +1,6 @@
 # Documentation approach
 
-**Read this if:** you are changing `docs/`, `AGENTS.md`, `CLAUDE.md` or a skill, or looking for the
-ADRs.
+**Read this if:** you are changing `docs/`, `AGENTS.md` or a skill, or looking for the ADRs.
 
 ## Requirements
 
@@ -66,12 +65,12 @@ counts and lists that restate something the repo already says.
 - **Under about 150 lines.** Past that it is usually two tasks.
 - **Indexed in `AGENTS.md`.** A page nothing points at is a page nothing reads.
 
-## AGENTS.md and CLAUDE.md
+## No CLAUDE.md
 
-`AGENTS.md` is the cross-vendor convention. Claude Code reads only `CLAUDE.md`, so that file is an
-`@AGENTS.md` import plus Claude-specific notes. A symlink breaks on Windows clones without
-`core.symlinks`; a copy drifts. If Claude Code starts reading `AGENTS.md` natively, delete
-`CLAUDE.md`.
+`AGENTS.md` is the cross-vendor convention, and Claude Code has read it natively since v2.1.277, so
+there is no `CLAUDE.md`. That has a silent failure mode, recorded in the `AGENTS.md` traps: any
+`CLAUDE.md` or `CLAUDE.local.md` in the tree takes precedence, and older versions read nothing. The
+fix for either is a `CLAUDE.md` containing `@AGENTS.md`, never a copy, which would drift.
 
 ## Adding something
 
