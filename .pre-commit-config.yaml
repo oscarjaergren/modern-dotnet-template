@@ -87,7 +87,10 @@ repos:
     hooks:
       - id: committed
         name: committed (conventional commits)
-        entry: mise exec -- committed --commit-file
+        # Merge commits pass: git writes their message, and squash merging keeps them off main.
+        entry: >-
+          sh -c 'git rev-parse -q --verify MERGE_HEAD >/dev/null
+          || exec mise exec -- committed --commit-file "$1"' --
         language: system
         stages: [commit-msg]
         always_run: true
