@@ -37,6 +37,25 @@ tag that does not exist.
 Set the family explicitly rather than relying on inference, so a future SDK change cannot silently
 move you to a different base.
 
+## Patching: AOT moves the runtime into your binary
+
+For a framework-dependent app, a .NET security release reaches production when you rebuild on a
+fresh base image, because the runtime lives in the image. **That does not work here.** `runtime-deps`
+contains no .NET at all. The runtime is compiled into the `Api` binary by the ILCompiler that ships
+with your SDK, so there are two patch streams and they move differently:
+
+| What                         | Lives in                  | Picked up by                                        |
+| ---------------------------- | ------------------------- | --------------------------------------------------- |
+| OS libraries — OpenSSL, libc | the `noble-chiseled` base | any rebuild; the floating tag pulls the current one |
+| The .NET runtime             | your binary               | a rebuild **with a newer SDK** — bump `global.json` |
+
+The second row is the one that catches people. Rebuilding with the same SDK recompiles the same
+runtime. The .NET 10.0.12 security release (8 September 2026, six CVEs) is the concrete case: built
+with SDK 10.0.400, this image still carried the 10.0.11 runtime, however fresh its base layer.
+
+So treat a `global.json` bump as a security fix, not housekeeping. Renovate raises it on the
+same schedule as everything else; for this app, merge it promptly and rebuild.
+
 ## Image size
 
 Two things dominate, and one of them is a trap.

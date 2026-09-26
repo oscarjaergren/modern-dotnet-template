@@ -16,7 +16,8 @@ From `Directory.Build.props`, applied to every project:
 - Deterministic builds; `ContinuousIntegrationBuild` when `GITHUB_ACTIONS` is set.
 
 In CI, additionally: `dotnet format --verify-no-changes`, an `openapi.json` drift check, an AOT
-publish with zero warnings, and a container that must start and serve traffic.
+publish with zero warnings, a container that must start, serve traffic, answer its health probes
+and stay under a compressed size ceiling, and a secret scan over full git history.
 
 ## Why this strict
 
@@ -63,11 +64,16 @@ Renovate at all, turning lock files back on is a reasonable change: set
 
 ## Relaxing a gate correctly
 
-Sometimes an analyzer is wrong, or collides with a framework's own conventions. Three suppressions
-exist, all in `.editorconfig`, all with a comment explaining why: `CA2007` (ConfigureAwait, noise in
-app code), and — scoped to tests only — `CA1707` (test method names use underscores) and `CA1711`
-(xUnit collection classes end in `Collection`, which `CA1711` reserves for `ICollection`
-implementations).
+Sometimes an analyzer is wrong, or collides with a framework's own conventions. Five suppressions
+exist, all in `.editorconfig`, all with a comment explaining why:
+
+- `CA2007` — `ConfigureAwait`, a library rule that is a no-op in ASP.NET Core app code.
+- `MA0004` — Meziantou's copy of `CA2007`, suppressed for the same reason.
+- `MA0048` — scoped to `src/AppHost/AppHost.cs` only. It wants the file named after its type, and
+  top-level statements synthesise a `Program` class nobody wrote.
+- `CA1707` — tests only. Test method names are sentences with underscores.
+- `CA1711` — tests only. xUnit collection classes end in `Collection`, which `CA1711` reserves for
+  `ICollection` implementations.
 
 `CA1848` is deliberately *not* suppressed. It asks for `LoggerMessage` delegates, and the one log
 site in the API uses the `[LoggerMessage]` source generator — which is also the right choice under
@@ -103,8 +109,13 @@ doing nothing.
 
 ## The formatting hook
 
-`.claude/hooks/format-cs.sh` runs `dotnet format` on edited C# files so agent output lands CI-clean.
-Two things about it fail silently if changed carelessly, and both are commented in the script:
+`.claude/hooks/format-cs.sh` formats every `.cs`, `.md` and `.json` file the agent edits, via
+`scripts/format.sh`, so agent output lands CI-clean. If formatting fails it exits 2, which under
+Claude Code's `PostToolUse` contract shows the error to the agent rather than blocking it — the edit
+has already happened, so the useful outcome is that the agent knows.
+
+Two traps in `dotnet format` fail silently if the script is changed carelessly, and both are
+commented in `scripts/format.sh`:
 
 - `dotnet format --include` matches paths **relative to the working directory**. Given an absolute
   path it matches nothing, exits 0, and formats nothing.

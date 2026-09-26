@@ -26,6 +26,13 @@ beyond fixing the template and noting the change in the release notes.
 - **The OpenAPI endpoint is Development-only** for the same reason; the document is committed to the
   repository instead.
 
+## One thing it cannot do for you
+
+Native AOT compiles the .NET runtime into the binary, so a runtime security release is picked up
+only by rebuilding with a newer SDK — a fresh base image does not do it. Bump `global.json` when a
+.NET security release lands. See
+[docs/containers-and-deployment.md](docs/containers-and-deployment.md#patching-aot-moves-the-runtime-into-your-binary).
+
 ## What it does not do
 
 There is no authentication, authorisation, rate limiting, or CORS policy — see the README's

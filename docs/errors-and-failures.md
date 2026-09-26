@@ -124,13 +124,14 @@ var message = outcome switch
 ```
 
 The compiler enforces exhaustiveness — no discard, no `default` arm — which is exactly the guarantee
-the libraries cannot give you. A first preview shipped in .NET 11 Preview 2; using it today requires
-the .NET 11 preview SDK, `net11.0`, and `<LangVersion>preview</LangVersion>`, so it is not something
-this template can adopt while targeting .NET 10 LTS.
+the libraries cannot give you. As of .NET 11 RC1 (September 2026) the feature is stabilised: no
+`<LangVersion>preview</LangVersion>`, and C# 15 is the default for `net11.0`. The supported way to
+use it is targeting .NET 11, a standard-term release, and this template deliberately targets .NET 10
+LTS — so it is not something the template adopts, but it is close enough to plan around.
 
 **The practical advice:** if you are starting a domain layer now and can wait, wait. Adopting a
-result library a few months before the language makes it redundant means a migration across every
-slice you have written in the meantime. If you cannot wait, `ErrorOr` is the smallest thing that
+result library while the language feature is at release candidate means a migration across every
+slice you write in the meantime. If you cannot wait, `ErrorOr` is the smallest thing that
 works and the easiest to migrate away from later.
 
 Either way the rule above does not change. Whether a failure is a `ProblemHttpResult`, an

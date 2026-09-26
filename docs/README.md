@@ -35,5 +35,8 @@ retrieving one page at a time.
 [documentation-approach.md](documentation-approach.md) lists the full requirements this was chosen
 against, and the cost: a stale ADR is still correct, a stale living document is just wrong.
 
-Measured figures are deliberately absent — CI reports current numbers on every run, and numbers
-written into documentation go stale silently. History comes from `git log`.
+Measured figures are allowed, but each one needs an answer to "what keeps this true?". A number CI
+asserts is fine — the image size in the README is a gate, not a claim. A number cited from an
+outside study is fine, dated and attributed. A number typed in once because it was true that
+afternoon is not, because nothing will tell you when it stops being true. History comes from
+`git log`.

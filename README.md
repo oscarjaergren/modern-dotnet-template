@@ -8,20 +8,20 @@ gates, and the instruction files rather than being a section in this README.
 
 ## What you get
 
-|               |                                                                         |
-| ------------- | ----------------------------------------------------------------------- |
-| Runtime       | .NET 10 (LTS), pinned via `global.json`                                 |
-| API           | Minimal APIs, `Features/` slices, no dispatch framework                 |
-| Orchestration | Aspire 13 — OpenTelemetry, health checks, resilience, service discovery |
-| Deployment    | Native AOT → **14.3 MB** container image, no Dockerfile                 |
-| Tests         | xUnit v3: unit, integration (Aspire), and architecture                  |
-| Contract      | `openapi.json` generated at build, committed, drift-gated in CI         |
-| Agents        | `AGENTS.md`, a slice skill, a review subagent, a format hook            |
+|               |                                                                            |
+| ------------- | -------------------------------------------------------------------------- |
+| Runtime       | .NET 10 (LTS), pinned via `global.json`                                    |
+| API           | Minimal APIs, `Features/` slices, no dispatch framework                    |
+| Orchestration | Aspire 13 — OpenTelemetry, health checks, resilience, service discovery    |
+| Deployment    | Native AOT → **~15 MB** container image (CI fails above 20), no Dockerfile |
+| Tests         | xUnit v3: unit, integration (Aspire), and architecture                     |
+| Contract      | `openapi.json` generated at build, committed, drift-gated in CI            |
+| Agents        | `AGENTS.md`, a slice skill, two subagents, a format hook, deny rules       |
 
 ## Quickstart
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and the Aspire CLI
-(`dotnet tool install -g aspire.cli`).
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download), the Aspire CLI
+(`dotnet tool install -g aspire.cli`), and [mise](https://mise.jdx.dev) for the pinned linters.
 
 ```bash
 git clone https://github.com/<you>/modern-dotnet-template.git
@@ -100,8 +100,10 @@ Claude Code does not read `AGENTS.md`;
 [docs/documentation-approach.md](docs/documentation-approach.md) explains why an import rather than a
 symlink, and how the instruction layers fit together.
 
-For Claude Code specifically, `.claude/` adds an `add-slice` skill, a `slice-reviewer` subagent, and
-a `PostToolUse` hook that runs `dotnet format` on edited files so output lands CI-clean unprompted.
+For Claude Code specifically, `.claude/` adds an `add-slice` skill, two subagents (`slice-reviewer`,
+and `codebase-locator` on the cheapest model tier), `Read` deny rules that keep build output and
+secrets out of the agent's file tools, and a `PostToolUse` hook that formats every file the agent
+edits so output lands CI-clean unprompted.
 
 `AGENTS.md` documents several traps that fail *silently* — most notably that .NET 10's validation
 source generator only discovers `public` types, so an `internal` request record means invalid

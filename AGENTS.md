@@ -152,7 +152,9 @@ warnings — suppressing `IL2026` does not make the code work, it moves the fail
 
 Build (warnings as errors) → unit + architecture tests → integration tests → `dotnet format
 --verify-no-changes` → `openapi.json` drift → AOT publish with zero trim/AOT warnings → container
-build → container starts and serves both endpoints.
+build → container starts and serves both endpoints, with working health probes and an image-size
+ceiling. A separate job scans full git history for secrets, because the commit hook only sees
+staged changes. Coverage is collected and summarised on the run; it is not a gate.
 
 A green local `dotnet build && dotnet test && dotnet format --verify-no-changes` covers most of it.
 
