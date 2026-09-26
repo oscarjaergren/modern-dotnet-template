@@ -54,8 +54,40 @@ jobs:
       # Unit, architecture, and Aspire integration tests. No container runtime is required:
       # the AppHost has only a project resource. Adding a database changes that —
       # see docs/adding-a-database.md.
+      # Local tools: ReportGenerator merges and summarises the coverage reports below.
+      - name: Restore tools
+        run: dotnet tool restore
+
+      # NOT `dotnet test --nologo`. The Microsoft.Testing.Platform runner rejects that flag by
+      # silently matching zero test modules, reports "Zero tests ran", and exits in a way that
+      # looks like a pass. See .pre-commit-config.yaml.
       - name: Test
-        run: dotnet test --no-build --configuration Release
+        run: dotnet test --no-build --configuration Release -- --coverage --coverage-output-format cobertura
+
+      # Each test project writes its own report over the same assemblies, so a single file reads
+      # far lower than reality — the unit tests alone "cover" 2% of Api. ReportGenerator merges
+      # all three. classfilters drops source-generated code (routing, OpenAPI, validation), which
+      # is not code anyone here wrote or can test directly.
+      #
+      # Reported, never gated: a percentage measures which lines a test touched, not whether it
+      # asserted anything, and the cheapest way to raise it is a test that asserts nothing.
+      - name: Coverage report
+        run: |
+          set -euo pipefail
+          dotnet tool run reportgenerator \
+            -reports:"TestResults/*.cobertura.xml" \
+            -targetdir:coverage \
+            -reporttypes:"MarkdownSummaryGithub;Cobertura" \
+            -classfilters:"-Microsoft.*" \
+            -verbosity:Warning
+          cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: error
 
       - name: Verify formatting
         run: dotnet format --verify-no-changes

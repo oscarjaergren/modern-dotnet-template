@@ -20,4 +20,13 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Enables the coverage flag on the Microsoft.Testing.Platform runner. Collected in CI and
+      rendered by ReportGenerator; deliberately not gated on a percentage, which rewards padding
+      the number rather than testing the thing. Shared here so all three test projects agree.
+    -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+  </ItemGroup>
+
 </Project>

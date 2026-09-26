@@ -48,6 +48,12 @@
   </ItemGroup>
 
   <ItemGroup Label="Testing">
+    <!--
+      Coverage is collected, not gated. A percentage threshold rewards padding the number; the
+      useful question is "which class has no tests?", which the per-class report answers.
+      ReportGenerator (see .config/dotnet-tools.json) merges the three reports and renders them.
+    -->
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.3" />
   </ItemGroup>

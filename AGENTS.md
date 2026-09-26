@@ -25,6 +25,7 @@ Everything runs from the repo root.
 | Run locally      | `aspire run`                                                                    |
 | AOT publish      | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64`                     |
 | Container        | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer` |
+| Coverage         | `dotnet test -- --coverage --coverage-output-format cobertura`                  |
 | Lint everything  | `prek run --all-files`                                                          |
 | Lint one check   | `prek run <hook-id> --all-files`                                                |
 | Fix formatting   | `scripts/format.sh`                                                             |
