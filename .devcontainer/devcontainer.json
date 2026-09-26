@@ -13,7 +13,7 @@
   },
 
   // clang and zlib for Native AOT. The container owns OS packages; mise owns tool versions.
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev && curl -fsSL https://mise.run | sh && ~/.local/bin/mise install && ~/.local/bin/mise exec -- prek install && dotnet tool restore && dotnet restore",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev && curl -fsSL https://mise.run/bash | sh && ~/.local/bin/mise install && ~/.local/bin/mise exec -- prek install && dotnet restore",
 
   "customizations": {
     "vscode": {

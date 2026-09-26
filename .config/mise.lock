@@ -46,6 +46,53 @@ url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_
 url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/384924919"
 provenance = "github-attestations"
 
+[[tools.aspire]]
+version = "13.5.4"
+backend = "github:microsoft/aspire"
+
+[tools.aspire."platforms.linux-arm64"]
+checksum = "sha256:9f7f5a702bc6a6ff1a0671ec128e0e22823757e7b3d3cc05cdbdaa21b80e9465"
+url = "https://github.com/microsoft/aspire/releases/download/v13.5.4/aspire-cli-linux-arm64-13.5.4.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/aspire/releases/assets/566480432"
+provenance = "github-attestations"
+
+[tools.aspire."platforms.linux-arm64-musl"]
+checksum = "sha256:9f7f5a702bc6a6ff1a0671ec128e0e22823757e7b3d3cc05cdbdaa21b80e9465"
+url = "https://github.com/microsoft/aspire/releases/download/v13.5.4/aspire-cli-linux-arm64-13.5.4.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/aspire/releases/assets/566480432"
+provenance = "github-attestations"
+
+[tools.aspire."platforms.linux-x64"]
+checksum = "sha256:cdefc0aff24e49ac1f00387a5dd09fb496ef6838c91348990068421b7851dd26"
+url = "https://github.com/microsoft/aspire/releases/download/v13.5.4/aspire-cli-linux-x64-13.5.4.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/aspire/releases/assets/566480440"
+provenance = "github-attestations"
+provenance_verified = true
+
+[tools.aspire."platforms.linux-x64-musl"]
+checksum = "sha256:a9f0d04dafd1302cee3d3d1b3eefe4064cd440dd6a2a8839c20e65a27f9304f0"
+url = "https://github.com/microsoft/aspire/releases/download/v13.5.4/aspire-cli-linux-musl-x64-13.5.4.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/aspire/releases/assets/566480438"
+provenance = "github-attestations"
+
+[tools.aspire."platforms.macos-arm64"]
+checksum = "sha256:641e1eaec4ef0575acbedbadc7d7b36094b278dc37ebf9ddb5bebf18927c3409"
+url = "https://github.com/microsoft/aspire/releases/download/v13.5.4/aspire-cli-osx-arm64-13.5.4.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/aspire/releases/assets/566480453"
+provenance = "github-attestations"
+
+[tools.aspire."platforms.macos-x64"]
+checksum = "sha256:65faf9da2dcd579e619f8301b90c2a8432a49a368c75ea39d204aa66869787da"
+url = "https://github.com/microsoft/aspire/releases/download/v13.5.4/aspire-cli-osx-x64-13.5.4.tar.gz"
+url_api = "https://api.github.com/repos/microsoft/aspire/releases/assets/566480474"
+provenance = "github-attestations"
+
+[tools.aspire."platforms.windows-x64"]
+checksum = "sha256:0eed355b8d04297c75ccc458b4e136f5522587459d2d361b26636381eac3e665"
+url = "https://github.com/microsoft/aspire/releases/download/v13.5.4/aspire-cli-win-x64-13.5.4.zip"
+url_api = "https://api.github.com/repos/microsoft/aspire/releases/assets/566480623"
+provenance = "github-attestations"
+
 [[tools.committed]]
 version = "1.1.11"
 backend = "aqua:crate-ci/committed"

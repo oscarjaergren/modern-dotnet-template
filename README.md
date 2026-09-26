@@ -16,13 +16,13 @@ the layout, the gates and the instruction files are designed to be worked in by 
 
 ## Quickstart
 
-Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download), the Aspire CLI
-(`dotnet tool install -g aspire.cli`) and [mise](https://mise.jdx.dev).
+Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download) and
+[mise](https://mise.jdx.dev/getting-started.html), activated in your shell.
 
 ```bash
 git clone https://github.com/oscarjaergren/modern-dotnet-template.git
 cd modern-dotnet-template
-mise install && prek install   # pinned linters and git hooks
+mise install && prek install   # pinned tools, including the Aspire CLI, and git hooks
 dotnet build && dotnet test
 aspire run                     # with the Aspire dashboard
 ```

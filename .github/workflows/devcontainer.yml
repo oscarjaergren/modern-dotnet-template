@@ -1,0 +1,38 @@
+name: Devcontainer
+
+# The one setup path the other workflows never run. Weekly as well, because the base image, the
+# features and the mise installer float and can break it with no change here. Not a required
+# check: path filters would leave it pending on every other PR.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .devcontainer/**
+      - .config/mise.*
+      - global.json
+      - .github/workflows/devcontainer.yml
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  devcontainer:
+    name: Devcontainer builds and passes the gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # A login, interactive shell, like a VS Code terminal, so mise's activation in .bashrc applies.
+      - name: Build it and run the gates inside
+        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        with:
+          push: never
+          runCmd: bash -lic 'prek run --all-files && aspire --version && dotnet build && dotnet test'
