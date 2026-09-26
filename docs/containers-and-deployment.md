@@ -50,11 +50,17 @@ with your SDK, so there are two patch streams and they move differently:
 | The .NET runtime             | your binary               | a rebuild **with a newer SDK** — bump `global.json` |
 
 The second row is the one that catches people. Rebuilding with the same SDK recompiles the same
-runtime. The .NET 10.0.12 security release (8 September 2026, six CVEs) is the concrete case: built
-with SDK 10.0.400, this image still carried the 10.0.11 runtime, however fresh its base layer.
+runtime, however fresh the base layer.
 
-So treat a `global.json` bump as a security fix, not housekeeping. Renovate raises it on the
-same schedule as everything else; for this app, merge it promptly and rebuild.
+`global.json` sets a **floor**, not an exact version: with `rollForward: latestFeature`, a build uses
+the newest installed 10.0 SDK at or above it. So the runtime you ship depends on the machine that
+builds it. The .NET 10.0.12 security release (8 September 2026, six CVEs) showed both sides: CI's
+runner already had SDK 10.0.401 and compiled in the patched runtime, while a developer machine
+with only 10.0.400 compiled in the vulnerable 10.0.11, from the same commit.
+
+Raising the floor is what makes the patch unconditional — no machine can build with an older SDK
+once `global.json` says 10.0.401. Treat that bump as a security fix, not housekeeping: Renovate
+raises it on the same schedule as everything else, and for this app it is worth merging promptly.
 
 ## Image size
 
