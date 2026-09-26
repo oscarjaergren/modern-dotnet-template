@@ -12,8 +12,7 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
 
-  // clang and zlib for Native AOT. The container owns OS packages; mise.toml owns tool
-  // versions.
+  // clang and zlib for Native AOT. The container owns OS packages; mise owns tool versions.
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev && curl -fsSL https://mise.run | sh && ~/.local/bin/mise install && ~/.local/bin/mise exec -- prek install && dotnet tool restore && dotnet restore",
 
   "customizations": {

@@ -63,7 +63,7 @@
       "enabled": false
     },
     {
-      "description": "Linter versions pinned in mise.toml rot like any other dependency.",
+      "description": "Linter versions pinned by mise rot like any other dependency.",
       "matchManagers": [
         "mise"
       ],

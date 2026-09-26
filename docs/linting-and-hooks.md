@@ -6,7 +6,7 @@ a fresh clone.
 ## Setup
 
 ```bash
-mise install    # every linter, at the version pinned in mise.toml
+mise install    # every linter, at the version pinned in .config/mise.toml
 prek install    # pre-commit, commit-msg and pre-push hooks
 ```
 
@@ -77,14 +77,14 @@ CI runs it through the same `committed.toml`.
 
 ## Adding a check
 
-Add it to `.pre-commit-config.yaml` and pin any new binary in `mise.toml`; CI picks it up. Then
-introduce a violation and watch it fail.
+Add it to `.pre-commit-config.yaml` and pin any new binary in `.config/mise.toml`; CI picks it up.
+Then introduce a violation and watch it fail.
 
 ## Left out on purpose
 
 - **markdownlint**: npm-only, and after dprint its remaining rules fight prose. lychee covers broken
   links, the failure that matters.
-- **dprint's TOML plugin**: it collapses the aligned comments in `mise.toml`.
+- **dprint's TOML plugin**: it collapses the aligned comments in `.config/mise.toml`.
 - **editorconfig-checker's `IndentSize`**: it rejects aligned continuation lines that `dotnet format`
   accepts.
 

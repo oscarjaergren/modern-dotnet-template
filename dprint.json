@@ -1,16 +1,8 @@
 {
-  "json": {
-    "indentWidth": 2
-  },
   "markdown": {
-    "textWrap": "maintain",
-    "emphasisKind": "asterisks",
-    "strongKind": "asterisks"
+    "emphasisKind": "asterisks"
   },
   "excludes": [
-    "**/artifacts/**",
-    "**/bin/**",
-    "**/obj/**",
     "src/Api/openapi.json"
   ],
   "plugins": [

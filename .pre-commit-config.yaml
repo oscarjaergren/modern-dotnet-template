@@ -34,7 +34,7 @@ repos:
         args: [--fix=no]                 # check only — .gitattributes owns the fixing
       - id: detect-private-key
 
-  # --- local tools, pinned by mise.toml -----------------------------------------------------------
+  # --- local tools, pinned by .config/mise.toml ---------------------------------------------------
   - repo: local
     hooks:
       # --- secrets -----------------------------------------------------------------------------
@@ -55,7 +55,8 @@ repos:
       - id: editorconfig-checker
         name: editorconfig-checker
         description: Binary is `ec`, not `editorconfig-checker`.
-        entry: mise exec -- ec
+        # IndentSize rejects aligned continuation lines; see docs/linting-and-hooks.md.
+        entry: mise exec -- ec -disable-indent-size
         language: system
 
       # --- GitHub Actions, including the inline bash in ci.yml ---------------------------------
