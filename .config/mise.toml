@@ -1,4 +1,4 @@
-# Pinned versions of every tool the git hooks run. The devcontainer and CI install from this
+# Pinned versions of every CLI tool the repo uses. The devcontainer and CI install from this
 # file too, so every machine runs identical binaries. The .NET SDK is pinned by global.json.
 #
 # Setup: mise install && prek install. Updates: Renovate, or `mise outdated`.
@@ -14,6 +14,7 @@ dprint = "0.56.0"                # markdown + json formatting
 jq = "1.8.1"                     # reads the agent hook's JSON payload
 lychee = "0.24.2"                # link checking (pre-push: network-bound)
 committed = "1.1.11"             # conventional commit messages
+aspire = "13.5.4"                # aspire run; matches the Aspire packages
 
 [settings]
 # Fail rather than silently using whatever happens to be on PATH.

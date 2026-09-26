@@ -73,9 +73,10 @@ Each of these fails silently or only on someone else's machine.
 - **A `CLAUDE.md` or `CLAUDE.local.md` in the repo or above it replaces this file** for Claude Code,
   silently, unless it imports it with `@AGENTS.md`. Claude Code before v2.1.277 (v2.1.281 on
   Bedrock or with telemetry off) needs exactly that import.
-- **Keep `.config/dotnet-tools.json` to one tool.** With two, `dotnet tool restore` fails on any
-  fresh machine ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)). Run extra tools
-  with `dotnet tool exec`.
+- **Pin CLI tools in `.config/mise.toml`, not a `dotnet-tools.json` manifest.** A manifest with two
+  tools fails `dotnet tool restore` on any fresh machine
+  ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)). For a one-off .NET tool, use
+  `dotnet tool exec`.
 
 ## Claude Code
 
@@ -94,7 +95,8 @@ contract.
 Build, all tests, format, `openapi.json` drift, AOT publish with zero trim warnings, and a container
 that must serve its endpoints and probes under a size ceiling. A separate job scans full git
 history for secrets, and PR titles must be conventional commits, since squash merging makes the
-title the commit on `main`. Coverage is reported, not gated.
+title the commit on `main`. Coverage is reported, not gated. The devcontainer is built and run
+through the gates when its inputs change, and weekly.
 
 ## Docs
 

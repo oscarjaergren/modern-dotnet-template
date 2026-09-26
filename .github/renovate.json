@@ -3,7 +3,8 @@
   "extends": [
     "config:recommended",
     ":semanticCommits",
-    "helpers:pinGitHubActionDigests"
+    "helpers:pinGitHubActionDigests",
+    ":enablePreCommit"
   ],
   "timezone": "Europe/Stockholm",
   "schedule": [
@@ -15,9 +16,17 @@
   ],
   "packageRules": [
     {
-      "description": "Aspire ships its packages as a matched set; a partial bump does not build.",
+      "description": "Tools pinned by mise rot like any other dependency. First, so later groups can claim a tool.",
+      "matchManagers": [
+        "mise"
+      ],
+      "groupName": "lint toolchain"
+    },
+    {
+      "description": "Aspire ships its packages as a matched set; a partial bump does not build. The CLI moves with them.",
       "matchPackageNames": [
-        "Aspire.**"
+        "Aspire.**",
+        "microsoft/aspire"
       ],
       "groupName": "Aspire"
     },
@@ -61,13 +70,6 @@
         "major"
       ],
       "enabled": false
-    },
-    {
-      "description": "Linter versions pinned by mise rot like any other dependency.",
-      "matchManagers": [
-        "mise"
-      ],
-      "groupName": "lint toolchain"
     }
   ],
   "vulnerabilityAlerts": {
@@ -76,7 +78,6 @@
     ],
     "schedule": [
       "at any time"
-    ],
-    "prPriority": 10
+    ]
   }
 }
