@@ -23,9 +23,8 @@ grows and "what is true now?" means replaying it. For an agent retrieving one pa
 is a correctness risk: it can act on a decision reversed years ago.
 
 The cost of the alternative: a stale ADR is still correct about its moment; a stale living page is
-simply wrong, and nothing signals it. Two things mitigate that. Code comments point at the page that
-explains them. And a measured figure must have something that keeps it true, a CI assertion or a
-dated source, or it does not go in.
+simply wrong, and nothing signals it. Two things mitigate that: code comments point at the page that
+explains them, and nothing goes in without something that keeps it true (below).
 
 arc42 and Simon Brown's guidebook assume linear reading (fails 3 and 5). Diátaxis splits a task
 across pages by purpose (fails 4). Oxide-style RFDs are reasonable if you want provenance with
@@ -53,13 +52,19 @@ A procedure is a skill; an explanation is a doc. Anything that breaks the build 
 goes in `AGENTS.md` as one line, because a trap nobody reads about is not mitigated. Keep
 `AGENTS.md` short: it is re-sent on every turn of every session.
 
+## Measured figures
+
+A number needs an answer to "what keeps this true?": a CI assertion, or a dated source. A number
+typed in once is not allowed, because nothing will say when it stops being true. The same goes for
+counts and lists that restate something the repo already says.
+
 ## Page rules
 
 - **Named for the trigger.** "Adding a database", not "persistence": the task is the unit.
 - **Self-contained.** `adding-a-database.md` repeats the AOT removal steps from `native-aot.md` on
   purpose.
 - **Under about 150 lines.** Past that it is usually two tasks.
-- **Indexed in `AGENTS.md` and `docs/README.md`.** A page nothing points at is a page nothing reads.
+- **Indexed in `AGENTS.md`.** A page nothing points at is a page nothing reads.
 
 ## AGENTS.md and CLAUDE.md
 

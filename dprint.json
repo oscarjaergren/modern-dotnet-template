@@ -11,9 +11,7 @@
     "**/artifacts/**",
     "**/bin/**",
     "**/obj/**",
-    "src/Api/openapi.json",
-    "**/*-lock.json",
-    "mise.lock"
+    "src/Api/openapi.json"
   ],
   "plugins": [
     "npm:@dprint/json@0.23.0",
