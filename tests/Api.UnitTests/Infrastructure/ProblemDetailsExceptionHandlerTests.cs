@@ -45,6 +45,18 @@ public class ProblemDetailsExceptionHandlerTests
         Assert.Contains("An unexpected error occurred.", body, StringComparison.Ordinal);
     }
 
+    // Development throws these where production returns the status directly.
+    [Fact]
+    public async Task Keeps_the_status_of_a_bad_request()
+    {
+        var (handled, status, body) = await Handle(
+            new BadHttpRequestException("Implicit body inferred", StatusCodes.Status400BadRequest));
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status400BadRequest, status);
+        Assert.DoesNotContain("Implicit body", body, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Does_not_leak_the_exception_message()
     {

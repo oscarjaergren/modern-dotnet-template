@@ -37,6 +37,10 @@ var app = builder.Build();
 // Must come before anything that can throw.
 app.UseExceptionHandler();
 
+// Gives a ProblemDetails body to errors returned before any endpoint code runs, such as a missing
+// request body in production.
+app.UseStatusCodePages();
+
 app.MapDefaultEndpoints();
 
 // Development only: the contract is committed, so production doesn't need to serve it.

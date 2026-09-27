@@ -14,8 +14,8 @@ is this strict.
 - Central Package Management with transitive pinning; deterministic CI builds.
 
 CI adds: `dotnet format --verify-no-changes`, `openapi.json` drift, an AOT publish with zero
-warnings, a container that must serve its endpoints and probes under a size ceiling, and a
-full-history secret scan.
+warnings, a container that must serve its endpoints and probes under a size ceiling and survive
+fuzzing against `openapi.json`, and a full-history secret scan.
 
 The point is a signal an agent can act on: a build that passes with forty warnings does not say
 whether the work is done. `latest-recommended` rather than `latest-all`, because `latest-all` turns

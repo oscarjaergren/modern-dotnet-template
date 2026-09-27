@@ -4,7 +4,8 @@
     "config:recommended",
     ":semanticCommits",
     "helpers:pinGitHubActionDigests",
-    ":enablePreCommit"
+    ":enablePreCommit",
+    "customManagers:githubActionsVersions"
   ],
   "timezone": "Europe/Stockholm",
   "schedule": [

@@ -59,24 +59,25 @@ and commit the `openapi.json` diff. Claude Code has this as the `/add-slice` ski
 
 ## Traps
 
-Each of these fails silently or only on someone else's machine.
+Each of these fails silently, cryptically, or only on someone else's machine.
 
-- **Request types must be `public`.** The validation generator skips internal types: validation
-  never runs and bad input returns 200, not 400.
-- **Keep `InterceptorsNamespaces` in `Api.csproj`** as `Microsoft.Extensions.Validation.Generated`.
-  The `Microsoft.AspNetCore.Http.Validation.Generated` name in older posts does nothing.
-- **Call `AddValidation()` from the assembly that defines the endpoints**, or validation does nothing.
-- **Every wire type needs an `ApiJsonSerializerContext` entry.** Under AOT a missing one fails at
-  runtime, not build.
+- **Validation fails open.** Bad input returns 200, not 400, if a request type isn't `public`, if
+  `InterceptorsNamespaces` in `Api.csproj` loses `Microsoft.Extensions.Validation.Generated` (the
+  `Microsoft.AspNetCore.Http.Validation.Generated` name in older posts does nothing), or if
+  `AddValidation()` moves out of the assembly that defines the endpoints. CI's contract fuzzing
+  catches it.
+- **Every wire type needs an `ApiJsonSerializerContext` entry.** A missing one fails the build's
+  OpenAPI step with `JsonTypeInfo metadata for type '...' was not provided`.
 - **`TypedResults.Problem(...)` needs a matching `.ProducesProblem(status)`**, or the status is
   missing from `openapi.json`.
 - **A `CLAUDE.md` or `CLAUDE.local.md` in the repo or above it replaces this file** for Claude Code,
   silently, unless it imports it with `@AGENTS.md`. Claude Code before v2.1.277 (v2.1.281 on
-  Bedrock or with telemetry off) needs exactly that import.
+  Bedrock or with telemetry off) needs exactly that import. A hook rejects a committed one without
+  it.
 - **Pin CLI tools in `.config/mise.toml`, not a `dotnet-tools.json` manifest.** A manifest with two
   tools fails `dotnet tool restore` on any fresh machine
-  ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)). For a one-off .NET tool, use
-  `dotnet tool exec`.
+  ([dotnet/sdk#53783](https://github.com/dotnet/sdk/issues/53783)), so a hook rejects one. For a
+  one-off .NET tool, use `dotnet tool exec`.
 
 ## Claude Code
 
@@ -93,10 +94,11 @@ contract.
 ## CI
 
 Build, all tests, format, `openapi.json` drift, AOT publish with zero trim warnings, and a container
-that must serve its endpoints and probes under a size ceiling. A separate job scans full git
-history for secrets, and PR titles must be conventional commits, since squash merging makes the
-title the commit on `main`. Coverage is reported, not gated. The devcontainer is built and run
-through the gates when its inputs change, and weekly.
+that must serve its endpoints and probes under a size ceiling, then survive fuzzing against
+`openapi.json`. A separate job scans full git history for secrets, and PR titles must be
+conventional commits, since squash merging makes the title the commit on `main`. Coverage is
+reported, not gated. The devcontainer is built and run through the gates when its inputs change,
+and weekly.
 
 ## Docs
 

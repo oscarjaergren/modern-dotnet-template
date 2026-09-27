@@ -36,6 +36,17 @@ public class GreetingsEndpointTests(ApiFixture fixture)
         Assert.True(body.RootElement.TryGetProperty("traceId", out _));
     }
 
+    // The framework rejects this before the endpoint runs, so no slice code writes the error body.
+    [Fact]
+    public async Task Post_greetings_without_a_body_returns_problem_details()
+    {
+        using var response = await fixture.Client.PostAsync(
+            "/greetings", content: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
     // Load-bearing: if validation stops being wired up, every payload here returns 200.
     [Theory]
     [InlineData("", null)]
