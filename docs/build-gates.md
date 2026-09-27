@@ -14,7 +14,8 @@ is this strict.
 - Central Package Management with transitive pinning; deterministic CI builds.
 
 CI adds: `dotnet format --verify-no-changes`, `openapi.json` drift, an AOT publish with zero
-warnings, a container that must serve its endpoints and probes under a size ceiling, and a
+warnings, a container that must serve its endpoints and probes under a size ceiling and survive
+fuzzing against `openapi.json`, mutation testing of the code a pull request changes, and a
 full-history secret scan.
 
 The point is a signal an agent can act on: a build that passes with forty warnings does not say
@@ -24,6 +25,20 @@ performance suggestions into failures.
 It has already paid for itself. The first build failed because `Microsoft.AspNetCore.OpenApi`
 pulled in `Microsoft.OpenApi` 2.0.0, which has a high-severity advisory (`GHSA-v5pm-xwqc-g5wc`).
 The fix was a transitive pin in `Directory.Packages.props`, with no new direct dependency.
+
+## Mutation testing
+
+Coverage is reported, not gated: a test that runs code without checking it still counts.
+[Stryker.NET](https://stryker-mutator.io/docs/stryker-net/introduction/) closes that hole. It makes
+small changes to the code, such as `>` to `>=`, and a change that no test notices is a gap. On a
+pull request CI mutates the changed code and fails if the unit tests catch under 80% of the
+mutants; not 100, because some mutants change nothing a test could observe.
+
+Only unit tests count. The integration tests run the app in another process, where the mutants
+never load, so endpoints and `Program.cs` are left out: keep logic in the classes the unit tests
+reach. The check isn't required while Stryker's runner for this test platform is in preview. To run
+it locally, use the command in the `mutation` job of `.github/workflows/ci.yml`, with
+`--since:main`.
 
 ## Why there are no NuGet lock files
 

@@ -11,7 +11,7 @@ the layout, the gates and the instruction files are designed to be worked in by 
 | Orchestration | Aspire 13: OpenTelemetry, health checks, resilience, service discovery    |
 | Deployment    | Native AOT, **~15 MB** container image (CI fails above 20), no Dockerfile |
 | Tests         | xUnit v3: unit, integration (via Aspire), architecture                    |
-| Contract      | `openapi.json` generated at build, committed, drift-gated in CI           |
+| Contract      | `openapi.json` generated at build, committed, drift-gated, fuzzed in CI   |
 | Agents        | `AGENTS.md`, a slice skill, subagents, a format hook, deny rules          |
 
 ## Quickstart

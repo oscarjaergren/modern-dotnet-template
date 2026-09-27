@@ -13,8 +13,10 @@ dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer
 
 A hand-written Dockerfile drifts (base tags, stages, layer order) and nothing fails when it does.
 Aspire's publisher uses this same mechanism, so anything configured here applies there too. CI
-runs the image and checks the endpoints, a 400 on bad input, a 409 with a `traceId`, both health
-probes, and a compressed size ceiling.
+runs the image and checks the endpoints, a 409 with a `traceId`, both health probes and a
+compressed size ceiling. Then [Schemathesis](https://schemathesis.readthedocs.io) fuzzes it against
+the committed `openapi.json`: every response must match the contract, and invalid input must be
+rejected. A failure prints a `curl` command that reproduces it.
 
 ## Base image
 

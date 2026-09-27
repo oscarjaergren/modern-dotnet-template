@@ -14,11 +14,11 @@ Without `prek install` a clone has no hooks, and nothing tells you.
 
 ## What runs when
 
-| Stage      | Checks                                                                                  |
-| ---------- | --------------------------------------------------------------------------------------- |
-| pre-commit | gitleaks, typos, editorconfig-checker, actionlint, shellcheck, dprint, and file hygiene |
-| commit-msg | conventional commit format                                                              |
-| pre-push   | `dotnet build`, `dotnet test`, `dotnet format`, `openapi.json` drift, lychee links      |
+| Stage      | Checks                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------ |
+| pre-commit | gitleaks, typos, editorconfig-checker, actionlint, shellcheck, dprint, file hygiene, and two AGENTS.md traps |
+| commit-msg | conventional commit format                                                                                   |
+| pre-push   | `dotnet build`, `dotnet test`, `dotnet format`, `openapi.json` drift, lychee links                           |
 
 The commit hook stays fast because a slow one gets bypassed with `--no-verify`. Anything that loads
 the .NET workspace is too slow for it: `dotnet format` took the hook from 0.5s to 6s, so it runs on
@@ -54,8 +54,7 @@ prek run --hook-stage pre-push   # the slow ones
 ## Nothing fails silently
 
 - Tools run through `mise exec`. A missing tool fails the hook; it never falls back to `PATH`.
-- No `|| true` or `continue-on-error` in any check. The one `|| true` in the repo is container
-  cleanup in a CI `trap`, so a failed cleanup can't replace the real result.
+- No `|| true` or `continue-on-error` anywhere.
 - The agent hook exits 2 on a formatting failure, which shows the error to the agent.
 - `fail_fast` is off, so one run reports every failure.
 - `--no-verify` is allowed, but CI runs the same definitions, so it only defers the failure.

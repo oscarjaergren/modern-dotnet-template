@@ -82,6 +82,21 @@ repos:
         language: system
         files: \.(md|json)$
 
+      # --- AGENTS.md traps a file check can catch ----------------------------------------------
+      - id: claude-md-imports-agents
+        name: CLAUDE.md imports AGENTS.md
+        description: Without the import it silently replaces AGENTS.md for Claude Code.
+        entry: '@AGENTS\.md'
+        language: pygrep
+        args: [--negate]
+        files: (^|/)CLAUDE(\.local)?\.md$
+
+      - id: no-dotnet-tool-manifest
+        name: no dotnet-tools.json
+        entry: Pin CLI tools in .config/mise.toml; two tools in a manifest break a fresh restore.
+        language: fail
+        files: (^|/)dotnet-tools\.json$
+
   # --- commit-msg ---------------------------------------------------------------------------------
   - repo: local
     hooks:
