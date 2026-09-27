@@ -40,6 +40,7 @@ public class GreeterTests
     [InlineData("admin")]
     [InlineData("ADMIN")]
     [InlineData("  root  ")]
+    [InlineData("system")]
     public void Reserved_names_are_recognised(string name) =>
         Assert.True(Greeter.IsReserved(name));
 

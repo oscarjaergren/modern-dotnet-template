@@ -181,3 +181,39 @@ jobs:
       - name: Container logs
         if: always() && env.CID != ''
         run: docker logs "$CID"
+
+  mutation:
+    name: Mutation testing (changed code)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      # renovate: datasource=nuget depName=dotnet-stryker
+      STRYKER_VERSION: 5.0.0
+    steps:
+      # Full history: --since diffs against origin/main.
+      - name: Checkout full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      # See docs/build-gates.md: why 80, and why endpoints and Program.cs are left out.
+      - name: Mutation test the changed code
+        run: >
+          dotnet tool exec "dotnet-stryker@$STRYKER_VERSION" --yes --
+          --test-project tests/Api.UnitTests/Api.UnitTests.csproj --project Api.csproj
+          --test-runner mtp --since:origin/main --break-at 80
+          --mutate '!**/*Endpoint.cs' --mutate '!**/Program.cs'
+          --output artifacts/stryker --reporter cleartext --reporter markdown
+
+      - name: Publish mutation report
+        if: always()
+        run: |
+          report=artifacts/stryker/reports/mutation-report.md
+          if [ -f "$report" ]; then cat "$report" >> "$GITHUB_STEP_SUMMARY"; fi

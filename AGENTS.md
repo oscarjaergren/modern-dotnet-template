@@ -97,8 +97,9 @@ Build, all tests, format, `openapi.json` drift, AOT publish with zero trim warni
 that must serve its endpoints and probes under a size ceiling, then survive fuzzing against
 `openapi.json`. A separate job scans full git history for secrets, and PR titles must be
 conventional commits, since squash merging makes the title the commit on `main`. Coverage is
-reported, not gated. The devcontainer is built and run through the gates when its inputs change,
-and weekly.
+reported, not gated; instead, pull requests are mutation tested, so unit tests must catch 80% of the
+mutants in changed code, endpoints and `Program.cs` excepted. The devcontainer is built and run
+through the gates when its inputs change, and weekly.
 
 ## Docs
 
