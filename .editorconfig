@@ -34,6 +34,14 @@ dotnet_diagnostic.CS8602.severity = error
 dotnet_diagnostic.CS8603.severity = error
 dotnet_diagnostic.CS8618.severity = error
 
+# --- dead code: unused usings, private members, written-but-unread members, parameters ---
+# Unreachable code and unused locals are compiler warnings already. dotnet format checks IDE0005;
+# the build can't without GenerateDocumentationFile (see Directory.Build.props).
+dotnet_diagnostic.IDE0005.severity = warning
+dotnet_diagnostic.IDE0051.severity = warning
+dotnet_diagnostic.IDE0052.severity = warning
+dotnet_diagnostic.IDE0060.severity = warning
+
 # --- trimming / Native AOT: these must never regress on the API ---
 # IL2026 RequiresUnreferencedCode, IL3050 RequiresDynamicCode, IL2091 generic mismatch.
 dotnet_diagnostic.IL2026.severity = error
