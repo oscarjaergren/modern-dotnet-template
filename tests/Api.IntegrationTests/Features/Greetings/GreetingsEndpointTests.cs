@@ -47,6 +47,18 @@ public class GreetingsEndpointTests(ApiFixture fixture)
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
+    // Last-wins would greet "admin" while a proxy that reads the first key saw "Ada".
+    [Fact]
+    public async Task Post_greetings_rejects_a_repeated_property()
+    {
+        using var content = new StringContent(
+            """{"name":"Ada","name":"admin"}""", System.Text.Encoding.UTF8, "application/json");
+        using var response = await fixture.Client.PostAsync(
+            "/greetings", content, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     // Load-bearing: if validation stops being wired up, every payload here returns 200.
     [Theory]
     [InlineData("", null)]

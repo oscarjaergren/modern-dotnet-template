@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using System.Text.Json.Serialization;
 using Api;
 using Api.Features.Greetings;
 using Api.Features.Ping;
@@ -12,20 +12,25 @@ builder.AddServiceDefaults();
 // Injected rather than static, so tests can use a fake clock.
 builder.Services.AddSingleton(TimeProvider.System);
 
-// No reflection fallback under AOT: every wire type must be in ApiJsonSerializerContext.
 builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.TypeInfoResolverChain.Insert(0, ApiJsonSerializerContext.Default));
+{
+    // No reflection fallback under AOT: every wire type must be in ApiJsonSerializerContext.
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, ApiJsonSerializerContext.Default);
+
+    // A repeated key would be last-wins, so a proxy reading the first one sees a different request.
+    options.SerializerOptions.AllowDuplicateProperties = false;
+
+    // The web default accepts "36" for an int, which types every int in openapi.json as a string too.
+    options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+});
 
 // Must be called from the assembly that defines the endpoints, or validation silently does
 // nothing. See the traps in AGENTS.md.
 builder.Services.AddValidation();
 
-// Without these, an unhandled exception is a 500 with an empty body. traceId links the response to
-// its OpenTelemetry trace. See docs/errors-and-failures.md.
-builder.Services.AddProblemDetails(options =>
-    options.CustomizeProblemDetails = context =>
-        context.ProblemDetails.Extensions["traceId"] =
-            Activity.Current?.Id ?? context.HttpContext.TraceIdentifier);
+// Without these, an unhandled exception is a 500 with an empty body. Every ProblemDetails carries
+// a traceId linking it to its OpenTelemetry trace. See docs/errors-and-failures.md.
+builder.Services.AddProblemDetails();
 
 builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 

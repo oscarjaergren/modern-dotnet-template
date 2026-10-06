@@ -48,16 +48,19 @@ public static class Extensions
             logging.IncludeScopes = true;
         });
 
+        var appName = builder.Environment.ApplicationName;
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
-                metrics.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
+                // System.Runtime is built in since .NET 9. A slice's own Meter or ActivitySource is
+                // exported when named after the app, such as Api.Orders.
+                metrics.AddMeter("System.Runtime", appName, $"{appName}.*")
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation();
             })
             .WithTracing(tracing =>
             {
-                tracing.AddSource(builder.Environment.ApplicationName)
+                tracing.AddSource(appName, $"{appName}.*")
                     .AddAspNetCoreInstrumentation(options =>
                         // Keep probes out of the traces. Ordinal: paths are not culture-sensitive
                         // text (MA0074).
