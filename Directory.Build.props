@@ -19,6 +19,11 @@
     -->
     <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!--
+      The build checks unused usings (IDE0005) only with GenerateDocumentationFile, which would
+      demand XML docs on everything, and otherwise warns that it can't. dotnet format checks them.
+    -->
+    <NoWarn>$(NoWarn);EnableGenerateDocumentationFile</NoWarn>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
 

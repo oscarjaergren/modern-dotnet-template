@@ -11,6 +11,8 @@ is this strict.
 - Nullable enabled; `CS8600`, `CS8602`, `CS8603`, `CS8618` are errors.
 - .NET analyzers at `latest-recommended`, plus Meziantou; code style enforced from `.editorconfig`.
 - Trim and AOT diagnostics (`IL2026`, `IL2091`, `IL3050`) are errors.
+- Dead code: unused private members and parameters, and private fields written but never read,
+  fail the build; `dotnet format` catches unused usings.
 - Central Package Management with transitive pinning; deterministic CI builds.
 
 CI adds: `dotnet format --verify-no-changes`, `openapi.json` drift, an AOT publish with zero
