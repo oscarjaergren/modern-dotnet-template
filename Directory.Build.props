@@ -20,10 +20,13 @@
     <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!--
-      The build checks unused usings (IDE0005) only with GenerateDocumentationFile, which would
-      demand XML docs on everything, and otherwise warns that it can't. dotnet format checks them.
+      XML docs feed openapi.json, and let the build check unused usings (IDE0005) and doc comments
+      that no longer match the code. A missing doc is fine (CS1591 is off in .editorconfig). The
+      files stay out of the published image.
     -->
-    <NoWarn>$(NoWarn);EnableGenerateDocumentationFile</NoWarn>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
 

@@ -52,6 +52,9 @@ the image. `CopyOutputSymbolsToPublishDirectory=false` prevents it; see
 
 ## Deployment is yours
 
+The image serves plain HTTP on 8080; TLS ends at your ingress or load balancer. The slim host has
+no HTTPS configuration, which is why there is no `https` launch profile.
+
 No Kubernetes manifests, IaC or cloud target. Aspire's Docker Compose publisher is not wired in,
 because `AddDockerComposeEnvironment()` adds a deployment target. To opt in, add
 `Aspire.Hosting.Docker` to `src/AppHost` (version in `Directory.Packages.props`), then:

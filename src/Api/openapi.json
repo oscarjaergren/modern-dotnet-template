@@ -91,20 +91,21 @@
           "name": {
             "maxLength": 50,
             "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "description": "Who to greet."
           },
           "age": {
             "maximum": 130,
             "minimum": 0,
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
-              "integer",
-              "string"
+              "integer"
             ],
+            "description": "Optional age; included in the greeting when supplied.",
             "format": "int32"
           }
-        }
+        },
+        "description": "Request body for `POST /greetings`."
       },
       "GreetingResponse": {
         "required": [
@@ -114,10 +115,12 @@
         "type": "object",
         "properties": {
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "The composed greeting."
           },
           "greetedAt": {
             "type": "string",
+            "description": "Server time when the greeting was composed.",
             "format": "date-time"
           }
         }
@@ -138,11 +141,9 @@
             ]
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
-              "integer",
-              "string"
+              "integer"
             ],
             "format": "int32"
           },
@@ -177,10 +178,12 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "Always `pong`."
           },
           "timestamp": {
             "type": "string",
+            "description": "Server time when the request was handled.",
             "format": "date-time"
           }
         }
@@ -201,11 +204,9 @@
             ]
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
-              "integer",
-              "string"
+              "integer"
             ],
             "format": "int32"
           },

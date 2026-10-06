@@ -17,15 +17,6 @@
     <ContainerFamily>noble-chiseled</ContainerFamily>
   </PropertyGroup>
 
-  <PropertyGroup Label="Validation">
-    <!--
-      Required for .NET 10 validation: without this namespace the compiler ignores the generated
-      interceptor and invalid requests silently return 200. The preview-era name in older posts,
-      Microsoft.AspNetCore.Http.Validation.Generated, does nothing. Integration tests assert the 400s.
-    -->
-    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.Extensions.Validation.Generated</InterceptorsNamespaces>
-  </PropertyGroup>
-
   <PropertyGroup Label="OpenAPI">
     <!-- Generate openapi.json at build time so contract changes show up in the PR diff. -->
     <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>

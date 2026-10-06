@@ -10,17 +10,18 @@ demonstrate conventions and are **meant to be deleted**.
 
 Run from the repo root.
 
-| Task             | Command                                                                         |
-| ---------------- | ------------------------------------------------------------------------------- |
-| Build            | `dotnet build` (also regenerates `src/Api/openapi.json`; commit it)             |
-| Test             | `dotnet test`, or `dotnet test --project <csproj>` (never `dotnet test <path>`) |
-| Coverage         | `dotnet test -- --coverage --coverage-output-format cobertura`                  |
-| Format           | `scripts/format.sh`; check with `dotnet format --verify-no-changes`             |
-| Lint             | `prek run --all-files`, or `prek run <hook-id> --all-files`                     |
-| Run              | `aspire run`                                                                    |
-| AOT publish      | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64`                     |
-| Container        | the AOT publish plus `/t:PublishContainer`                                      |
-| First-time setup | `mise install && prek install`                                                  |
+| Task             | Command                                                                                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build            | `dotnet build` (also regenerates `src/Api/openapi.json`; commit it)                                                                                                  |
+| Test             | `dotnet test`; filter only with `--project <csproj> -- --filter-class '*Name'` (from the root a filter exits 8 though every test passed; never `dotnet test <path>`) |
+| Coverage         | `dotnet test -- --coverage --coverage-output-format cobertura`                                                                                                       |
+| Format           | `scripts/format.sh`; check with `dotnet format --verify-no-changes`                                                                                                  |
+| Lint             | `prek run --all-files`, or `prek run <hook-id> --all-files`                                                                                                          |
+| Run              | `aspire run` (interactive, holds the terminal)                                                                                                                       |
+| Run, as an agent | `aspire start --isolated` (background, random ports); `aspire logs api --format Json`, `aspire otel traces api --format Json`; `aspire stop`                         |
+| AOT publish      | `dotnet publish src/Api/Api.csproj -c Release -r linux-x64`                                                                                                          |
+| Container        | the AOT publish plus `/t:PublishContainer`                                                                                                                           |
+| First-time setup | `mise install && prek install`                                                                                                                                       |
 
 ## Layout
 
@@ -61,11 +62,10 @@ and commit the `openapi.json` diff. Claude Code has this as the `/add-slice` ski
 
 Each of these fails silently, cryptically, or only on someone else's machine.
 
-- **Validation fails open.** Bad input returns 200, not 400, if a request type isn't `public`, if
-  `InterceptorsNamespaces` in `Api.csproj` loses `Microsoft.Extensions.Validation.Generated` (the
-  `Microsoft.AspNetCore.Http.Validation.Generated` name in older posts does nothing), or if
-  `AddValidation()` moves out of the assembly that defines the endpoints. CI's contract fuzzing
-  catches it.
+- **Validation fails open.** Bad input returns 200, not 400, if a request type isn't `public` or
+  `AddValidation()` moves out of the assembly that defines the endpoints. The SDK registers the
+  generator's interceptors; older posts that add an `InterceptorsNamespaces` entry predate that.
+  CI's contract fuzzing catches it.
 - **Every wire type needs an `ApiJsonSerializerContext` entry.** A missing one fails the build's
   OpenAPI step with `JsonTypeInfo metadata for type '...' was not provided`.
 - **`TypedResults.Problem(...)` needs a matching `.ProducesProblem(status)`**, or the status is
