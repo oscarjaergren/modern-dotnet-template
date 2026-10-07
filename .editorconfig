@@ -90,6 +90,10 @@ dotnet_naming_style.underscore_prefix.required_prefix = _
 # --- exceptions are for bugs; see docs/errors-and-failures.md ---
 dotnet_diagnostic.CA1031.severity = error
 
+# MA0155: an exception thrown in an async void method crashes the process, and the banned-API list
+# can't express a language construct.
+dotnet_diagnostic.MA0155.severity = warning
+
 # --- suppressions: each needs an architectural reason or a genuine tool conflict ---
 # CA2007: ConfigureAwait(false) matters only for libraries. ASP.NET Core has no
 # SynchronizationContext, so here it would be a no-op on every await.

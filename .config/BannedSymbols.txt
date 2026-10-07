@@ -25,3 +25,31 @@ M:System.Reflection.Assembly.Load(System.Reflection.AssemblyName);Native AOT can
 M:System.Reflection.Assembly.Load(System.Byte[]);Native AOT can't load assemblies at runtime
 M:System.Reflection.Assembly.LoadFrom(System.String);Native AOT can't load assemblies at runtime
 M:System.Reflection.Assembly.LoadFile(System.String);Native AOT can't load assemblies at runtime
+T:System.Diagnostics.Stopwatch;Use the injected TimeProvider's GetTimestamp and GetElapsedTime, so tests can control time
+M:System.Threading.Tasks.Task.Delay(System.Int32);Pass the injected TimeProvider: Task.Delay(TimeSpan, TimeProvider), so tests can skip the wait
+M:System.Threading.Tasks.Task.Delay(System.TimeSpan);Pass the injected TimeProvider: Task.Delay(TimeSpan, TimeProvider), so tests can skip the wait
+M:System.Threading.Tasks.Task.Delay(System.Int32,System.Threading.CancellationToken);Pass the injected TimeProvider: Task.Delay(TimeSpan, TimeProvider, CancellationToken), so tests can skip the wait
+M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.Threading.CancellationToken);Pass the injected TimeProvider: Task.Delay(TimeSpan, TimeProvider, CancellationToken), so tests can skip the wait
+T:System.Threading.Timer;Use the injected TimeProvider's CreateTimer, so tests can control time
+T:System.Timers.Timer;Use the injected TimeProvider's CreateTimer, so tests can control time
+M:System.Threading.PeriodicTimer.#ctor(System.TimeSpan);Pass the injected TimeProvider: new PeriodicTimer(period, timeProvider), so tests can control time
+M:System.Environment.Exit(System.Int32);Use IHostApplicationLifetime.StopApplication: exiting skips graceful shutdown, drops in-flight requests and loses buffered telemetry
+T:Microsoft.AspNetCore.Http.IHttpContextAccessor;Take HttpContext, or the value you need, as a handler parameter: the accessor is a hidden dependency that is null outside a request
+M:System.Threading.Thread.#ctor(System.Threading.ThreadStart);Use a BackgroundService: a hand-made thread skips graceful shutdown and loses its exceptions
+M:System.Threading.Thread.#ctor(System.Threading.ThreadStart,System.Int32);Use a BackgroundService: a hand-made thread skips graceful shutdown and loses its exceptions
+M:System.Threading.Thread.#ctor(System.Threading.ParameterizedThreadStart);Use a BackgroundService: a hand-made thread skips graceful shutdown and loses its exceptions
+M:System.Threading.Thread.#ctor(System.Threading.ParameterizedThreadStart,System.Int32);Use a BackgroundService: a hand-made thread skips graceful shutdown and loses its exceptions
+T:System.Threading.ThreadPool;Use a BackgroundService: queued work skips graceful shutdown and loses its exceptions
+M:System.GC.Collect;A service never needs to force a collection; find what holds the memory instead
+M:System.GC.Collect(System.Int32);A service never needs to force a collection; find what holds the memory instead
+M:System.GC.Collect(System.Int32,System.GCCollectionMode);A service never needs to force a collection; find what holds the memory instead
+M:System.GC.Collect(System.Int32,System.GCCollectionMode,System.Boolean);A service never needs to force a collection; find what holds the memory instead
+M:System.GC.Collect(System.Int32,System.GCCollectionMode,System.Boolean,System.Boolean);A service never needs to force a collection; find what holds the memory instead
+M:System.Threading.Tasks.Task.Run(System.Action);In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
+M:System.Threading.Tasks.Task.Run(System.Action,System.Threading.CancellationToken);In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
+M:System.Threading.Tasks.Task.Run(System.Func{System.Threading.Tasks.Task});In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
+M:System.Threading.Tasks.Task.Run(System.Func{System.Threading.Tasks.Task},System.Threading.CancellationToken);In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
+M:System.Threading.Tasks.Task.Run``1(System.Func{``0});In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
+M:System.Threading.Tasks.Task.Run``1(System.Func{``0},System.Threading.CancellationToken);In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
+M:System.Threading.Tasks.Task.Run``1(System.Func{System.Threading.Tasks.Task{``0}});In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
+M:System.Threading.Tasks.Task.Run``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken);In a request, work handed to Task.Run outlives the request and loses its exceptions: use a BackgroundService, or keep it inline
