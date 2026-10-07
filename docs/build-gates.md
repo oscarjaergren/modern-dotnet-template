@@ -13,10 +13,12 @@ is this strict.
 - Trim and AOT diagnostics (`IL2026`, `IL2091`, `IL3050`) are errors.
 - Dead code fails the build: unused usings, private members and parameters, and private fields
   written but never read. So do XML doc comments that no longer match the code.
-- Banned APIs, each failing with its replacement named: the clock (use `TimeProvider`), a bare
+- Banned APIs, each failing with its replacement named. Time in every form goes through
+  `TimeProvider` (the clock, `Stopwatch`, `Task.Delay`, timers), so tests control it. Others: a bare
   `HttpClient` (it skips the resilience and service discovery `ServiceDefaults` configures),
-  blocking waits, `Console`, environment variables and runtime assembly loading. The list is
-  `.config/BannedSymbols.txt`; tests have a shorter one in `tests/`.
+  blocking waits, `Task.Run`, hand-made threads, `Environment.Exit`, `IHttpContextAccessor`,
+  `GC.Collect`, `Console`, environment variables and runtime assembly loading. The list is `.config/BannedSymbols.txt`;
+  tests have a shorter one in `tests/`. `async void` fails through MA0155.
 - A code budget: cyclomatic complexity 10 per method, a maintainability index floor of 20, 50 lines
   per method, and coupling and inheritance depth at the analyzers' defaults. The repo's worst cases
   were 3, 53 and 37 lines when the limits were set. Thresholds are in `.config/CodeMetricsConfig.txt`
