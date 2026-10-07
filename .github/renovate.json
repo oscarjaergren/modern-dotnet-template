@@ -4,8 +4,7 @@
     "config:recommended",
     ":semanticCommits",
     "helpers:pinGitHubActionDigests",
-    ":enablePreCommit",
-    "customManagers:githubActionsVersions"
+    ":enablePreCommit"
   ],
   "timezone": "Europe/Stockholm",
   "schedule": [
@@ -80,5 +79,17 @@
     "schedule": [
       "at any time"
     ]
-  }
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Versions of tools mise does not install, pinned in .config/mise.toml under a # renovate: comment.",
+      "managerFilePatterns": [
+        "/^\\.config/mise\\.toml$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\w+_VERSION = \"(?<currentValue>[^\"]+)\""
+      ]
+    }
+  ]
 }

@@ -6,11 +6,10 @@ a fresh clone.
 ## Setup
 
 ```bash
-mise install    # every linter, at the version pinned in .config/mise.toml
-prek install    # pre-commit, commit-msg and pre-push hooks
+mise run setup   # every tool pinned in .config/mise.toml, then the git hooks
 ```
 
-Without `prek install` a clone has no hooks, and nothing tells you.
+Without it a clone has no hooks, and nothing tells you.
 
 ## What runs when
 
@@ -35,8 +34,8 @@ see. `scripts/format.sh` is the one thing that formats, and the agent's `PostToo
 on every edit, so there is rarely anything left for the commit hook to reject.
 
 ```bash
-scripts/format.sh                # whole repo
-scripts/format.sh path/to/file   # specific files
+mise run format                  # whole repo
+mise run format path/to/file     # specific files
 ```
 
 Two `dotnet format` traps are handled in that script, and both fail silently if it is changed
@@ -46,9 +45,9 @@ formats nothing; and `--no-restore` half-loads the workspace, so only some fixes
 ## Running checks yourself
 
 ```bash
-prek run --all-files             # the commit stage, exactly as CI runs it
+mise run lint                    # the commit stage, exactly as CI runs it
 prek run <hook-id> --all-files   # one check
-prek run --hook-stage pre-push   # the slow ones
+mise run check                   # everything CI's build job checks
 ```
 
 ## Nothing fails silently

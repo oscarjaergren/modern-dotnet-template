@@ -48,9 +48,8 @@ mutants; not 100, because some mutants change nothing a test could observe.
 
 Only unit tests count. The integration tests run the app in another process, where the mutants
 never load, so endpoints and `Program.cs` are left out: keep logic in the classes the unit tests
-reach. The check isn't required while Stryker's runner for this test platform is in preview. To run
-it locally, use the command in the `mutation` job of `.github/workflows/ci.yml`, with
-`--since:main`.
+reach. The check isn't required while Stryker's runner for this test platform is in preview. Run it
+locally with `mise run mutate`.
 
 ## Why there are no NuGet lock files
 

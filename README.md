@@ -22,16 +22,19 @@ Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download) and
 ```bash
 git clone https://github.com/oscarjaergren/modern-dotnet-template.git
 cd modern-dotnet-template
-mise install && prek install   # pinned tools, including the Aspire CLI, and git hooks
-dotnet build && dotnet test
-aspire run                     # with the Aspire dashboard
+mise run setup   # pinned tools, including the Aspire CLI, and git hooks
+mise run check   # lint, build, test, format, contract
+aspire run       # with the Aspire dashboard
 ```
+
+`mise tasks` lists every other command.
 
 Try the endpoints with `src/Api/Api.http` or `curl localhost:5180/ping`. Build the container (needs
 Docker or Podman) with:
 
 ```bash
-dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer
+mise run image         # AOT publish to api:latest
+mise run image-check   # endpoints, probes, size, contract fuzzing
 ```
 
 The `Ping` and `Greetings` slices show the conventions worth copying. **Delete both** once you have

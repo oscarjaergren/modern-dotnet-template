@@ -26,4 +26,4 @@ Check, in order of how much a miss costs:
 7. **Contract:** a changed request or response shape needs a regenerated, committed `openapi.json`.
 
 Report **Must fix** (wrong, or fails silently) and **Consider** (clarity). If the slice is clean,
-say so in one line. You may run `dotnet build && dotnet test`; do not edit files.
+say so in one line. You may run `mise run build` and `mise run test`; do not edit files.

@@ -56,7 +56,8 @@ Copy `src/Api/Features/Greetings/`. Steps 2 and 3 are where the silent failures 
 
 8. **Integration tests** in `tests/Api.IntegrationTests/Features/<Slice>/`, with
    `[Collection(nameof(ApiCollection))]`. Assert the wire format with `JsonDocument`, and assert **at
-   least one 400 per validated field**: that is the only thing that catches a non-public request type.
+   least one 400 per validated field**: locally, that is the only thing that catches a non-public
+   request type.
 
-9. **Verify:** `dotnet build && dotnet test && dotnet format --verify-no-changes`, then read the
+9. **Verify:** `mise run check`, then read the
    `src/Api/openapi.json` diff. It is the API contract; commit it.

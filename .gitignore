@@ -8,6 +8,7 @@ obj/
 # Local tool, editor and test state.
 .aspire/
 .claude/worktrees/
+.config/restish/cache/
 .vs/
 .idea/
 .vscode/
