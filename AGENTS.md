@@ -16,6 +16,9 @@ The ones you need most:
 - The app in the background: `mise run start`, then `url`, `rebuild` after a code change, `logs`
   and `traces` (JSON), and `stop`. `mise run start` doesn't hold the terminal; `aspire run` does.
 - The container: `mise run image`, then `mise run image-check`.
+- The API, local or deployed: `mise run call <operation>`, with `-p <env>` for an environment in
+  `.config/restish/restish.json`. An error's `traceId` finds its trace: `mise run traces --search
+  <id>`. [Debugging a deployment](docs/containers-and-deployment.md#debugging-a-deployment)
 
 ## Layout
 

@@ -16,6 +16,7 @@ jq = "1.8.1"                     # reads the agent hook's JSON payload
 lychee = "0.24.2"                # link checking (pre-push: network-bound)
 committed = "1.1.11"             # conventional commit messages
 aspire = "13.5.4"                # aspire run; matches the Aspire packages
+"aqua:rest-sh/restish" = "2.3.0" # `mise run call`: the API as commands, from openapi.json
 
 [settings]
 # Fail rather than silently using whatever happens to be on PATH.
@@ -72,6 +73,10 @@ run = [
 [tasks.start]
 description = "Start the app in the background on random ports; 'mise run stop' ends it"
 run = "aspire start --isolated --non-interactive --nologo"
+
+[tasks.call]
+description = "Call the API by operation, e.g. 'mise run call ping'; '-p staging' targets an environment"
+run = "scripts/call.sh"
 
 [tasks.url]
 description = "Print the running API's URL, for curl or an .http file"

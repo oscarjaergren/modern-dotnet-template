@@ -46,6 +46,45 @@ url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_
 url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/384924919"
 provenance = "github-attestations"
 
+[[tools."aqua:rest-sh/restish"]]
+version = "2.3.0"
+backend = "aqua:rest-sh/restish"
+
+[tools."aqua:rest-sh/restish"."platforms.linux-arm64"]
+checksum = "sha256:d55ae3ebd2a79e6fda8e0ea125eed2530eed60e27e61e3ffa243ae72ae973c91"
+url = "https://github.com/rest-sh/restish/releases/download/v2.3.0/restish-2.3.0-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/rest-sh/restish/releases/assets/461814991"
+
+[tools."aqua:rest-sh/restish"."platforms.linux-arm64-musl"]
+checksum = "sha256:d55ae3ebd2a79e6fda8e0ea125eed2530eed60e27e61e3ffa243ae72ae973c91"
+url = "https://github.com/rest-sh/restish/releases/download/v2.3.0/restish-2.3.0-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/rest-sh/restish/releases/assets/461814991"
+
+[tools."aqua:rest-sh/restish"."platforms.linux-x64"]
+checksum = "sha256:5de24353560597562ffc99799ea79a0cd22c5f3cabbb3ffba3ff5e9b97473357"
+url = "https://github.com/rest-sh/restish/releases/download/v2.3.0/restish-2.3.0-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/rest-sh/restish/releases/assets/461814994"
+
+[tools."aqua:rest-sh/restish"."platforms.linux-x64-musl"]
+checksum = "sha256:5de24353560597562ffc99799ea79a0cd22c5f3cabbb3ffba3ff5e9b97473357"
+url = "https://github.com/rest-sh/restish/releases/download/v2.3.0/restish-2.3.0-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/rest-sh/restish/releases/assets/461814994"
+
+[tools."aqua:rest-sh/restish"."platforms.macos-arm64"]
+checksum = "sha256:5dc8d53c319e044fbef01954f90ea59b13ff1b570e8a1382102b0c62e7e702d2"
+url = "https://github.com/rest-sh/restish/releases/download/v2.3.0/restish-2.3.0-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/rest-sh/restish/releases/assets/461814978"
+
+[tools."aqua:rest-sh/restish"."platforms.macos-x64"]
+checksum = "sha256:fbd4bf1aa2e741c59a54dd916554454b94b9b9638a0f32db78111d5f0d4f0e02"
+url = "https://github.com/rest-sh/restish/releases/download/v2.3.0/restish-2.3.0-darwin-amd64.tar.gz"
+url_api = "https://api.github.com/repos/rest-sh/restish/releases/assets/461814977"
+
+[tools."aqua:rest-sh/restish"."platforms.windows-x64"]
+checksum = "sha256:8d9f468996c986a5ad49e53c5224fec9f86670328b05675a02891e3c4d54225b"
+url = "https://github.com/rest-sh/restish/releases/download/v2.3.0/restish-2.3.0-windows-amd64.zip"
+url_api = "https://api.github.com/repos/rest-sh/restish/releases/assets/461814975"
+
 [[tools.aspire]]
 version = "13.5.4"
 backend = "github:microsoft/aspire"

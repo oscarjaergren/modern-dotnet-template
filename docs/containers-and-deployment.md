@@ -71,6 +71,35 @@ aspire publish -p docker-compose   # writes docker-compose.yaml and .env
 The image it references is built the same way as above. Generated deployment files are build output
 and gitignored; `src/Api/openapi.json` is a contract and is committed.
 
+## Debugging a deployment
+
+**Call it.** `mise run call` turns `openapi.json` into commands: `mise run call ping`, or
+`mise run call create-greeting 'name: Ada'`. Add an environment under `profiles` in
+`.config/restish/restish.json`, then `mise run call ping -p staging`. That file holds URLs only:
+credentials stay in environment variables, which Restish reads as `env:NAME` (see
+`restish api connect --help`). An error response exits non-zero and carries a `traceId`.
+
+**Send its telemetry anywhere.** The app exports OpenTelemetry over OTLP whenever
+`OTEL_EXPORTER_OTLP_ENDPOINT` is set, so choosing a backend is configuration, not code:
+
+| Backend                     | Configuration                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------- |
+| New Relic                   | endpoint `https://otlp.nr-data.net`, `OTEL_EXPORTER_OTLP_HEADERS=api-key=<license key>`             |
+| Grafana Cloud               | the stack's OTLP endpoint, `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64 instance:token>` |
+| Sentry                      | traces and logs only (OTLP ingestion is in beta); endpoint and header from the project's settings   |
+| Prometheus                  | metrics only, with Prometheus 3's `--web.enable-otlp-receiver`; traces and logs need another store  |
+| Datadog, or several at once | an OpenTelemetry Collector, or the Datadog Agent, as the endpoint                                   |
+
+Vendors' own .NET agents hook into the runtime's profiling API, which Native AOT doesn't have; use
+OTLP.
+
+**Read it back.** `mise run traces` and `mise run logs` read an Aspire dashboard. A deployment that
+runs the standalone dashboard as its OTLP endpoint is one flag away:
+`mise run traces --dashboard-url <url> --api-key <key> --search <traceId>`. That dashboard keeps
+telemetry in memory, which suits dev and staging, not production. With another backend, point those
+two tasks' `run` lines in `.config/mise.toml` at its CLI or API, such as `newrelic nrql query` or
+Grafana's `logcli`. The task names stay, so agents and docs don't change.
+
 ## Health endpoints
 
 `/health` (readiness) and `/alive` (liveness) are mapped in every environment, unlike the Aspire

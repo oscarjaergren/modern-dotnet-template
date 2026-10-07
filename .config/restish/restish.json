@@ -1,0 +1,11 @@
+{
+  "apis": {
+    "service": {
+      "base_url": "http://localhost:5180",
+      "spec_files": ["src/Api/openapi.json"],
+      "profiles": {
+        "staging": { "base_url": "https://staging.example.invalid" }
+      }
+    }
+  }
+}

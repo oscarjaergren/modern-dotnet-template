@@ -33,6 +33,9 @@ code=$(curl -s -o "$body" -w '%{http_code}' -X POST "$URL/greetings" \
 [ "$code" = 409 ] || fail "expected 409 for a reserved name, got $code."
 grep -q '"traceId"' "$body" || fail "the ProblemDetails has no traceId, so logs can't be correlated."
 
+# `mise run call` generates its commands from the same contract, so they must work on the image.
+API_URL=$URL scripts/call.sh ping >/dev/null || fail "'mise run call ping' failed against the image."
+
 # Probes must answer in Production, where the Aspire default leaves them unmapped. More than the
 # aggregate status would leak the list of checks.
 for probe in /alive /health; do
