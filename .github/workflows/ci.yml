@@ -39,7 +39,7 @@ jobs:
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
 
       - name: Lint (prek, all files)
-        run: prek run --all-files --show-diff-on-failure
+        run: mise run lint
 
       - name: Restore
         run: dotnet restore
@@ -77,7 +77,21 @@ jobs:
         run: prek run lychee --all-files --hook-stage pre-push
 
       - name: Verify OpenAPI contract is current
-        run: scripts/check-openapi-drift.sh
+        run: mise run openapi-check
+
+      # The commands AGENTS.md gives agents for running the app. Traces appear a few seconds after
+      # the request, once exported.
+      - name: Agent run loop
+        run: |
+          mise run start
+          trap 'mise run stop' EXIT
+          url=$(mise run --quiet url)
+          curl -fsS "$url/ping"
+          mise run rebuild
+          curl -fsS "$url/ping"
+          for _ in $(seq 30); do mise run --quiet traces > /dev/null 2>&1 && break; sleep 1; done
+          mise run --quiet traces | jq -e 'length > 0' > /dev/null
+          mise run --quiet logs -n 5 | jq -e '.logs | length > 0' > /dev/null
 
   secret-scan:
     name: Secrets (full history)
@@ -99,9 +113,6 @@ jobs:
   aot-container:
     name: Native AOT and container
     runs-on: ubuntu-latest
-    env:
-      # renovate: datasource=docker depName=schemathesis/schemathesis
-      SCHEMATHESIS_VERSION: v4.28.0-trixie
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -113,82 +124,25 @@ jobs:
           cache: true
           cache-dependency-path: Directory.Packages.props
 
+      - name: Setup toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
       # Native AOT shells out to clang and the system linker on Linux.
       - name: Install Native AOT prerequisites
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev
 
       # Any trim or AOT warning fails this (Directory.Build.props).
       - name: Publish container image
-        run: dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer
+        run: mise run image
 
-      - name: Start the image
-        run: |
-          echo "CID=$(docker run -d -p 8080:8080 api:latest)" >> "$GITHUB_ENV"
-          curl -fsS --retry 30 --retry-all-errors --retry-delay 1 --retry-connrefused -o /dev/null \
-            http://127.0.0.1:8080/alive
-
-      # A clean AOT publish proves little; failures show at runtime. Run it.
-      - name: Verify the image serves traffic
-        run: |
-          set -euo pipefail
-          curl -fsS http://127.0.0.1:8080/ping | tee /dev/stderr | grep -q '"status":"pong"'
-
-          curl -fsS -X POST http://127.0.0.1:8080/greetings \
-            -H 'Content-Type: application/json' -d '{"name":"Ada","age":36}' \
-            | tee /dev/stderr | grep -q 'Hello, Ada'
-
-          # A 409 with a traceId also proves ProblemDetails serialises under AOT.
-          conflict=$(curl -s -o /tmp/conflict.json -w '%{http_code}' -X POST http://127.0.0.1:8080/greetings \
-            -H 'Content-Type: application/json' -d '{"name":"admin"}')
-          if [ "$conflict" != "409" ]; then
-            echo "::error::Expected 409 for a reserved name, got $conflict."
-            exit 1
-          fi
-          grep -q '"traceId"' /tmp/conflict.json || {
-            echo "::error::ProblemDetails response is missing traceId — log correlation is broken."
-            exit 1
-          }
-
-          # Probes must answer in Production, where the Aspire default leaves them unmapped.
-          for probe in /alive /health; do
-            body=$(curl -fsS "http://127.0.0.1:8080$probe")
-            [ "$body" = "Healthy" ] || {
-              echo "::error::$probe returned '$body', expected exactly 'Healthy'."
-              echo "::error::A body with more than the aggregate status leaks the check list."
-              exit 1
-            }
-          done
-
-          # Keeps the README's size claim honest, and catches AOT symbols leaking into the image.
-          # Gzipped, so it measures compressed size whichever Docker image store the runner uses.
-          bytes=$(docker save api:latest | gzip -c | wc -c)
-          awk -v b="$bytes" 'BEGIN { printf "Image size (compressed): %.1f MB\n", b / 1048576 }'
-          if [ "$bytes" -gt 20971520 ]; then
-            echo "::error::Image is over the 20 MB compressed ceiling. Something large got into a layer."
-            exit 1
-          fi
-
-      # Generated requests, every response checked against the committed openapi.json: 500s,
-      # undocumented statuses, wrong bodies, and invalid input accepted (validation not running).
-      # positive_data_acceptance is off: System.Text.Json rejects 14.0 for an int, which JSON
-      # Schema counts as an integer (dotnet/runtime#40596).
-      - name: Fuzz the API against its contract
-        run: |
-          docker run --rm --network host -v "$PWD/src/Api/openapi.json:/openapi.json:ro" \
-            "schemathesis/schemathesis:$SCHEMATHESIS_VERSION" \
-            run /openapi.json --url http://127.0.0.1:8080 --exclude-checks positive_data_acceptance
-
-      - name: Container logs
-        if: always() && env.CID != ''
-        run: docker logs "$CID"
+      # Endpoints, probes, size ceiling, the README's size claim, then fuzzing against openapi.json.
+      - name: Check the image
+        run: mise run image-check
 
   mutation:
     name: Mutation testing (changed code)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    env:
-      # renovate: datasource=nuget depName=dotnet-stryker
-      STRYKER_VERSION: 5.0.0
     steps:
       # Full history: --since diffs against origin/main.
       - name: Checkout full history
@@ -203,14 +157,12 @@ jobs:
           cache: true
           cache-dependency-path: Directory.Packages.props
 
+      - name: Setup toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
       # See docs/build-gates.md: why 80, and why endpoints and Program.cs are left out.
       - name: Mutation test the changed code
-        run: >
-          dotnet tool exec "dotnet-stryker@$STRYKER_VERSION" --yes --
-          --test-project tests/Api.UnitTests/Api.UnitTests.csproj --project Api.csproj
-          --test-runner mtp --since:origin/main --break-at 80
-          --mutate '!**/*Endpoint.cs' --mutate '!**/Program.cs'
-          --output artifacts/stryker --reporter cleartext --reporter markdown
+        run: mise run mutate
 
       - name: Publish mutation report
         if: always()

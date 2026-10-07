@@ -1,4 +1,4 @@
-# Git hooks, run by prek (https://prek.j178.dev). Setup: mise install && prek install.
+# Git hooks, run by prek (https://prek.j178.dev). Setup: mise run setup.
 # CI runs `prek run --all-files`, so every definition here is enforced there too.
 #
 # Hooks verify and never rewrite files; formatting happens at edit time (scripts/format.sh).
@@ -96,6 +96,14 @@ repos:
         entry: Pin CLI tools in .config/mise.toml; two tools in a manifest break a fresh restore.
         language: fail
         files: (^|/)dotnet-tools\.json$
+
+      # --- docs name only tasks that exist -----------------------------------------------------
+      - id: doc-tasks
+        name: docs name only tasks that exist
+        entry: mise exec -- scripts/check-doc-tasks.sh
+        language: system
+        files: (\.md|mise\.toml)$
+        pass_filenames: false
 
   # --- commit-msg ---------------------------------------------------------------------------------
   - repo: local

@@ -1,7 +1,8 @@
-# Pinned versions of every CLI tool the repo uses. The devcontainer and CI install from this
-# file too, so every machine runs identical binaries. The .NET SDK is pinned by global.json.
+# Pinned versions of every CLI tool the repo uses, and the repo's command line (the tasks below).
+# The devcontainer and CI install from this file too, so every machine runs identical binaries.
+# The .NET SDK is pinned by global.json.
 #
-# Setup: mise install && prek install. Updates: Renovate, or `mise outdated`.
+# Setup: mise run setup. Updates: Renovate, or `mise outdated`.
 
 [tools]
 prek = "0.4.14"                  # git hook manager
@@ -19,3 +20,91 @@ aspire = "13.5.4"                # aspire run; matches the Aspire packages
 [settings]
 # Fail rather than silently using whatever happens to be on PATH.
 lockfile = true
+
+[env]
+# Tools run outside mise's backends; Renovate updates them through these comments.
+# renovate: datasource=docker depName=schemathesis/schemathesis
+SCHEMATHESIS_VERSION = "v4.28.0-trixie"
+# renovate: datasource=nuget depName=dotnet-stryker
+STRYKER_VERSION = "5.0.0"
+
+# The repo's command line, for people and agents: `mise tasks` lists it, `mise run <task>` runs it.
+# CI runs the same tasks, so one that stops working fails CI rather than misleading a reader.
+
+[tasks.setup]
+description = "Install the pinned tools and the git hooks"
+run = ["mise install", "mise exec -- prek install"]
+
+[tasks.build]
+description = "Build everything; also regenerates src/Api/openapi.json, which you commit"
+run = "dotnet build"
+
+[tasks.test]
+description = "Run the tests; 'mise run test <text>' runs only test methods whose names contain it"
+run = "scripts/test.sh"
+
+[tasks.coverage]
+description = "Run the tests with Cobertura coverage reports in TestResults/"
+run = "dotnet test -- --coverage --coverage-output-format cobertura"
+
+[tasks.format]
+description = "Format the repo, or only the files given"
+run = "scripts/format.sh"
+
+[tasks.lint]
+description = "Run every commit-stage hook on all files, as CI does"
+run = "prek run --all-files --show-diff-on-failure"
+
+[tasks.openapi-check]
+description = "Fail if a build changes src/Api/openapi.json, the committed API contract"
+run = "scripts/check-openapi-drift.sh"
+
+[tasks.check]
+description = "What CI's build job checks: lint, build, test, format, contract"
+run = [
+  "mise run lint",
+  "dotnet build",
+  "dotnet test",
+  "dotnet format --verify-no-changes",
+  "mise run openapi-check",
+]
+
+[tasks.start]
+description = "Start the app in the background on random ports; 'mise run stop' ends it"
+run = "aspire start --isolated --non-interactive --nologo"
+
+[tasks.url]
+description = "Print the running API's URL, for curl or an .http file"
+run = '''aspire describe --format Json --non-interactive --nologo | jq -r '.resources[] | select(.displayName == "api") | .urls[0].url' '''
+
+[tasks.rebuild]
+description = "Rebuild the running API from source and restart it, after a code change"
+run = "aspire resource api rebuild --non-interactive --nologo"
+
+[tasks.logs]
+description = "Print the running API's logs as JSON; add '-n 50' for the last 50"
+run = "aspire logs api --format Json --non-interactive --nologo"
+
+[tasks.traces]
+description = "Print the running API's traces as JSON; fails until a request has been made"
+run = "aspire otel traces api --format Json --non-interactive --nologo"
+
+[tasks.stop]
+description = "Stop the app that 'mise run start' started"
+run = "aspire stop --non-interactive --nologo"
+
+[tasks.image]
+description = "Publish the Native AOT container image api:latest (needs Docker and clang)"
+run = "dotnet publish src/Api/Api.csproj -c Release -r linux-x64 /t:PublishContainer"
+
+[tasks.image-check]
+description = "Run api:latest and check endpoints, probes, size and the contract (needs Docker)"
+run = "scripts/image-check.sh"
+
+[tasks.fuzz]
+description = "Fuzz a running API against openapi.json; default URL http://127.0.0.1:8080"
+run = "scripts/fuzz.sh"
+
+[tasks.mutate]
+description = "Mutation test the code changed since origin/main, or the branch given"
+run = "scripts/mutate.sh"
