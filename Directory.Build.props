@@ -47,6 +47,15 @@
 
   <ItemGroup Label="Analyzers">
     <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
+    <!--
+      Bans APIs that bypass a convention here, such as the clock or IHttpClientFactory. Each entry
+      in .config/BannedSymbols.txt names the replacement; tests have their own, shorter list.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <!-- Thresholds for the code budget rules turned on in .editorconfig. -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory).config/CodeMetricsConfig.txt" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory).config/BannedSymbols.txt"
+                     Condition="'$(IsTestProject)' != 'true'" />
   </ItemGroup>
 
   <PropertyGroup Label="Packaging">

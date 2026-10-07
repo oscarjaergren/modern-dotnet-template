@@ -1,0 +1,3 @@
+M:System.Threading.Thread.Sleep(System.Int32);A sleep makes a test slow and flaky: wait for the condition, or use FakeTimeProvider
+M:System.Threading.Thread.Sleep(System.TimeSpan);A sleep makes a test slow and flaky: wait for the condition, or use FakeTimeProvider
+T:System.Console;xUnit doesn't show console output: use TestContext.Current.TestOutputHelper

@@ -41,6 +41,17 @@ dotnet_diagnostic.IDE0051.severity = warning
 dotnet_diagnostic.IDE0052.severity = warning
 dotnet_diagnostic.IDE0060.severity = warning
 
+# --- code budget: thresholds in .config/CodeMetricsConfig.txt, method length below ---
+# Complexity per method (CA1502, limit 10), maintainability index (CA1505, floor 20), coupling
+# (CA1506, defaults: 40 types per member, 95 per type) and inheritance depth (CA1501, default 5).
+dotnet_diagnostic.CA1501.severity = warning
+dotnet_diagnostic.CA1502.severity = warning
+dotnet_diagnostic.CA1505.severity = warning
+dotnet_diagnostic.CA1506.severity = warning
+dotnet_diagnostic.MA0051.severity = warning
+MA0051.maximum_lines_per_method = 50
+MA0051.maximum_statements_per_method = 30
+
 # --- XML docs: generated for openapi.json; a missing one is fine, a wrong one fails the build ---
 dotnet_diagnostic.CS1591.severity = none
 
@@ -98,3 +109,11 @@ dotnet_diagnostic.CA1711.severity = none
 # MA0048: top-level statements synthesise a Program class. AppHost.cs is Aspire's naming
 # convention, kept for readability.
 dotnet_diagnostic.MA0048.severity = none
+
+[src/Api/Program.cs]
+# CA1506: the composition root couples to every slice by design; it grows one line per slice.
+dotnet_diagnostic.CA1506.severity = none
+
+[src/Api/ApiJsonSerializerContext.cs]
+# CA1506: its generated half references every wire type, so coupling grows with the API by design.
+dotnet_diagnostic.CA1506.severity = none
