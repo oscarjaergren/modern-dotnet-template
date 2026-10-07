@@ -1,0 +1,27 @@
+P:System.DateTime.Now;Use the injected TimeProvider, so tests can control the clock
+P:System.DateTime.UtcNow;Use the injected TimeProvider, so tests can control the clock
+P:System.DateTime.Today;Use the injected TimeProvider, so tests can control the clock
+P:System.DateTimeOffset.Now;Use the injected TimeProvider, so tests can control the clock
+P:System.DateTimeOffset.UtcNow;Use the injected TimeProvider, so tests can control the clock
+M:System.Net.Http.HttpClient.#ctor;Use IHttpClientFactory: a bare HttpClient skips the resilience and service discovery that ServiceDefaults configures
+M:System.Net.Http.HttpClient.#ctor(System.Net.Http.HttpMessageHandler);Use IHttpClientFactory: a bare HttpClient skips the resilience and service discovery that ServiceDefaults configures
+M:System.Net.Http.HttpClient.#ctor(System.Net.Http.HttpMessageHandler,System.Boolean);Use IHttpClientFactory: a bare HttpClient skips the resilience and service discovery that ServiceDefaults configures
+M:System.Threading.Thread.Sleep(System.Int32);Blocks a thread: await Task.Delay, with the injected TimeProvider
+M:System.Threading.Thread.Sleep(System.TimeSpan);Blocks a thread: await Task.Delay, with the injected TimeProvider
+P:System.Threading.Tasks.Task`1.Result;Blocks a thread and risks deadlock: await the task
+M:System.Threading.Tasks.Task.Wait;Blocks a thread and risks deadlock: await the task
+M:System.Threading.Tasks.Task.Wait(System.Int32);Blocks a thread and risks deadlock: await the task
+M:System.Threading.Tasks.Task.Wait(System.TimeSpan);Blocks a thread and risks deadlock: await the task
+M:System.Threading.Tasks.Task.Wait(System.Threading.CancellationToken);Blocks a thread and risks deadlock: await the task
+M:System.Threading.Tasks.Task.Wait(System.Int32,System.Threading.CancellationToken);Blocks a thread and risks deadlock: await the task
+M:System.Threading.Tasks.Task.Wait(System.TimeSpan,System.Threading.CancellationToken);Blocks a thread and risks deadlock: await the task
+M:System.Runtime.CompilerServices.TaskAwaiter.GetResult;Blocks a thread and risks deadlock: await the task
+M:System.Runtime.CompilerServices.TaskAwaiter`1.GetResult;Blocks a thread and risks deadlock: await the task
+T:System.Console;Use ILogger: console output has no level, no structure and doesn't reach OpenTelemetry
+M:System.Environment.GetEnvironmentVariable(System.String);Use IConfiguration, which reads environment variables too and can be overridden in tests
+M:System.Environment.GetEnvironmentVariable(System.String,System.EnvironmentVariableTarget);Use IConfiguration, which reads environment variables too and can be overridden in tests
+M:System.Reflection.Assembly.Load(System.String);Native AOT can't load assemblies at runtime
+M:System.Reflection.Assembly.Load(System.Reflection.AssemblyName);Native AOT can't load assemblies at runtime
+M:System.Reflection.Assembly.Load(System.Byte[]);Native AOT can't load assemblies at runtime
+M:System.Reflection.Assembly.LoadFrom(System.String);Native AOT can't load assemblies at runtime
+M:System.Reflection.Assembly.LoadFile(System.String);Native AOT can't load assemblies at runtime

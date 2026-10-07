@@ -13,6 +13,14 @@ is this strict.
 - Trim and AOT diagnostics (`IL2026`, `IL2091`, `IL3050`) are errors.
 - Dead code fails the build: unused usings, private members and parameters, and private fields
   written but never read. So do XML doc comments that no longer match the code.
+- Banned APIs, each failing with its replacement named: the clock (use `TimeProvider`), a bare
+  `HttpClient` (it skips the resilience and service discovery `ServiceDefaults` configures),
+  blocking waits, `Console`, environment variables and runtime assembly loading. The list is
+  `.config/BannedSymbols.txt`; tests have a shorter one in `tests/`.
+- A code budget: cyclomatic complexity 10 per method, a maintainability index floor of 20, 50 lines
+  per method, and coupling and inheritance depth at the analyzers' defaults. The repo's worst cases
+  were 3, 53 and 37 lines when the limits were set. Thresholds are in `.config/CodeMetricsConfig.txt`
+  and `.editorconfig`.
 - Central Package Management with transitive pinning; deterministic CI builds.
 
 CI adds: `dotnet format --verify-no-changes`, `openapi.json` drift, an AOT publish with zero
