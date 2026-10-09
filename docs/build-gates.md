@@ -73,6 +73,16 @@ Suppress in `.editorconfig`, as narrowly as possible, with a comment saying why.
 `#pragma warning disable` in source. Never relax a gate to get one build through; change it on
 purpose, in its own commit.
 
+The one exception is a NuGet audit finding with no fixed version yet, which `.editorconfig` can't
+hold. Suppress it in `Directory.Build.props` with an expiry date, so the build fails again on that
+date and someone checks for a fix, instead of the suppression outliving the reason for it:
+
+```xml
+<!-- Why it can't be fixed yet, and the upstream issue to watch. -->
+<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-xxxx-xxxx-xxxx"
+                    Condition="$([System.DateTime]::UtcNow.ToString(yyyyMMdd)) &lt; 20270101" />
+```
+
 ## Adding a gate
 
 Put it in `Directory.Build.props` if it applies everywhere, `.editorconfig` if it is style or

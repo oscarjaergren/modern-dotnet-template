@@ -54,7 +54,8 @@ mise run check                   # everything CI's build job checks
 
 - Tools run through `mise exec`. A missing tool fails the hook; it never falls back to `PATH`.
 - No `|| true` or `continue-on-error` anywhere.
-- The agent hook exits 2 on a formatting failure, which shows the error to the agent.
+- The agent hook exits 2 on any failure, including a missing tool or script, which shows the error
+  to the agent.
 - `fail_fast` is off, so one run reports every failure.
 - `--no-verify` is allowed, but CI runs the same definitions, so it only defers the failure. A
   secret is the exception: once pushed, it needs rotating, whatever CI says.

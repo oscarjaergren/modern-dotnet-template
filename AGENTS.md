@@ -79,7 +79,8 @@ Each of these fails silently, cryptically, or only on someone else's machine.
 ## Claude Code
 
 - **`/add-slice`**: the full recipe for a new slice.
-- **`slice-reviewer`** agent: reviews a slice before a PR.
+- **`slice-reviewer`** agent: reviews a slice before a PR. CI runs it on a PR labelled
+  `ai-review`.
 - **`codebase-locator`** agent: answers "where is X?" on the cheapest model, in its own context.
   Prefer it over searching from the main thread.
 - A `PostToolUse` hook formats every `.cs`, `.md` and `.json` file you edit, so don't hand-format.

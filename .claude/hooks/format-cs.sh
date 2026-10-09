@@ -3,32 +3,17 @@
 # PostToolUse hook: formats each file the agent edits (via scripts/format.sh), so its output
 # is CI-clean and the git hooks only have to verify. See docs/linting-and-hooks.md.
 #
-# A PostToolUse hook cannot block; the edit has already happened. Exit 2 shows stderr to the
-# agent, so a real failure uses it rather than leaving the agent to assume its output is
-# formatted. Exit 0 means there was nothing to do.
+# A PostToolUse hook cannot block; the edit has already happened. Every failure exits 2, which
+# shows stderr to the agent, rather than leaving it to assume its output is formatted.
 set -uo pipefail
 
-payload=$(cat)
-
-# jq via mise, so the pinned version runs, falling back to PATH.
-jq_bin() {
-  if command -v mise >/dev/null 2>&1 && mise which jq >/dev/null 2>&1; then
-    mise exec -- jq "$@"
-  elif command -v jq >/dev/null 2>&1; then
-    jq "$@"
-  else
-    return 127
-  fi
+fail() {
+  echo "format-cs.sh: $1, so this edit was NOT formatted." >&2
+  exit 2
 }
 
-file=$(printf '%s' "$payload" | jq_bin -r '.tool_input.file_path // empty' 2>/dev/null)
-case $? in
-  0) ;;
-  127) echo "format-cs.sh: jq not found, so this edit was NOT formatted. Run 'mise install'." >&2
-       exit 2 ;;
-  *) echo "format-cs.sh: could not read the hook payload, so this edit was NOT formatted." >&2
-     exit 2 ;;
-esac
+file=$(mise exec -- jq -r '.tool_input.file_path // empty') \
+  || fail "could not read the hook payload with the pinned jq (run 'mise install')"
 
 # Only the file types scripts/format.sh knows how to format.
 case "$file" in
@@ -36,13 +21,10 @@ case "$file" in
   *) exit 0 ;;
 esac
 
+# Deleted or moved by the edit: nothing to format.
 [ -f "$file" ] || exit 0
 
-root="${CLAUDE_PROJECT_DIR:-$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null || pwd)}"
-[ -x "$root/scripts/format.sh" ] || exit 0
-
-if ! output=$("$root/scripts/format.sh" "$file" 2>&1); then
-  echo "format-cs.sh: formatting $file failed, so it is NOT CI-clean:" >&2
+output=$("$CLAUDE_PROJECT_DIR/scripts/format.sh" "$file" 2>&1) || {
   printf '%s\n' "$output" >&2
-  exit 2
-fi
+  fail "formatting $file failed"
+}
