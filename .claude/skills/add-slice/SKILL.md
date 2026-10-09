@@ -45,10 +45,12 @@ Copy `src/Api/Features/Greetings/`. Steps 2 and 3 are where the silent failures 
    ```
 
    Declare `ValidationProblem` even though the handler never returns it: that documents the 400. For
-   a `TypedResults.Problem(...)` outcome, add the matching `.ProducesProblem(status)`.
+   a failure, add `ProblemHttpResult` to the `Results<...>` and the matching
+   `.ProducesProblem(status)`.
 
 5. **Logic** that doesn't need HTTP goes in its own file, as a static function unless something needs
-   substituting. Never reference another slice; shared code moves out of `Features/`.
+   substituting. It returns `ErrorOr<T>` when it can fail; the endpoint maps the error with
+   `ToProblem()`, as `Greetings` does. Never reference another slice; shared code moves out of `Features/`.
 
 6. **Register the route:** one `app.Map<Slice>();` line in `Program.cs`.
 

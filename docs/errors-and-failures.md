@@ -20,16 +20,25 @@ A thrown exception appears in neither. It becomes a 500 the caller cannot tell a
 
 ## Returning a failure
 
-`Greetings` is the example. A reserved name is expected, so `Greeter.IsReserved` returns a `bool`
-and the endpoint returns a 409:
+`Greetings` is the example. Logic below the endpoint returns an
+[`ErrorOr<T>`](https://github.com/amantinband/error-or), never an HTTP type, so it stays testable
+without HTTP and survives being called from more than one place:
 
 ```csharp
-if (Greeter.IsReserved(request.Name))
+if (ReservedNames.Contains(name.Trim()))
 {
-    return TypedResults.Problem(
-        title: "Name is reserved.",
-        detail: $"'{request.Name}' cannot be greeted.",
-        statusCode: StatusCodes.Status409Conflict);
+    return Error.Conflict("Greetings.NameReserved", $"'{name}' is reserved.");
+}
+```
+
+The endpoint maps it at the edge. `ToProblem()`, in `Infrastructure/ErrorProblems.cs`, is the one
+place an error type becomes a status, with the description as the ProblemDetails `detail`:
+
+```csharp
+var greeting = Greeter.Greet(request.Name, request.Age);
+if (greeting.IsError)
+{
+    return greeting.FirstError.ToProblem();
 }
 ```
 
@@ -48,38 +57,17 @@ type.
 exception. A handler that doesn't log silently swallows errors. This one logs at `Error`; if you
 write another, log in it too.
 
-## Below the HTTP boundary
+## Why ErrorOr
 
-`Results<...>` is an HTTP type, so a domain layer needs its own way to report failure. None of these
-is in the template:
+`Results<...>` is an HTTP type, so the layer below needs its own failure type, and the first slice
+to pick one sets the style for every slice after it. So the template picks: `ErrorOr` is small,
+AOT-clean, and its error types map one-to-one to statuses. `FluentResults` invites stuffing context
+into results, `OneOf` is verbose, and `LanguageExt` or `CSharpFunctionalExtensions` change how the
+whole codebase reads.
 
-| Option                       | Cost                                                         |
-| ---------------------------- | ------------------------------------------------------------ |
-| `ErrorOr`                    | Small and focused. One dependency, and its style spreads.    |
-| `FluentResults`              | Richer and heavier; invites stuffing context into results.   |
-| `OneOf`                      | Nearest to a real union; verbose, weak exhaustiveness.       |
-| `CSharpFunctionalExtensions` | Good if you want the whole functional style. All or nothing. |
-| `LanguageExt`                | Very large; changes how the whole codebase reads.            |
-| Hand-rolled `Result<T>`      | No dependency. You will get exhaustiveness wrong.            |
-
-The template picks none, for two reasons. The first slice to use one sets the style for every slice
-after it. And C# 15 union types, in .NET 11 in November 2026, make the category largely redundant,
-with exhaustiveness the compiler enforces:
-
-```csharp
-public union GreetingOutcome(Greeted, NameReserved, NameTooLong);
-
-var message = outcome switch
-{
-    Greeted g      => g.Message,
-    NameReserved r => $"'{r.Name}' is reserved.",
-    NameTooLong t  => "Too long.",
-};
-```
-
-They were stabilised in .NET 11 RC1 (September 2026), but they need `net11.0`, a standard-term
-release, and this template targets .NET 10 LTS. If you can wait for them, wait; adopting a library
-now means a migration later. If you can't, `ErrorOr` is the smallest and easiest to leave.
+C# 15 union types will make the category redundant, with exhaustiveness the compiler enforces. They
+need `net11.0`, a standard-term release; on LTS they arrive with .NET 12 in November 2027. Migrate
+then: each `ErrorOr<T>` becomes a union of its outcomes.
 
 ## What is enforced
 
