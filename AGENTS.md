@@ -46,8 +46,8 @@ and commit the `openapi.json` diff. Claude Code has this as the `/add-slice` ski
   of `Features/`. [code-organisation.md](docs/code-organisation.md)
 - **Data is a `record`**: `public sealed`, `init`, `required`. Behaviour stays in classes.
   [data-models.md](docs/data-models.md)
-- **Expected failures are returned, not thrown**, as `Results<...>` so they appear in `openapi.json`.
-  `CA1031` is an error. [errors-and-failures.md](docs/errors-and-failures.md)
+- **Expected failures are returned, not thrown**: `ErrorOr<T>` below the endpoint, mapped with
+  `ToProblem()` into a `Results<...>` so they appear in `openapi.json`. `CA1031` is an error. [errors-and-failures.md](docs/errors-and-failures.md)
 - **Warnings are errors**, including NuGet audit. Never weaken a gate to pass a build.
   [build-gates.md](docs/build-gates.md)
 - **Native AOT**: no unreferenced reflection, no `Reflection.Emit`, source-generated JSON only,

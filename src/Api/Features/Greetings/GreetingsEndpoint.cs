@@ -1,3 +1,4 @@
+using Api.Infrastructure;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Api.Features.Greetings;
@@ -28,16 +29,12 @@ internal static class GreetingsEndpoint
         GreetingRequest request,
         TimeProvider timeProvider)
     {
-        if (Greeter.IsReserved(request.Name))
+        var greeting = Greeter.Greet(request.Name, request.Age);
+        if (greeting.IsError)
         {
-            return TypedResults.Problem(
-                title: "Name is reserved.",
-                detail: $"'{request.Name}' cannot be greeted.",
-                statusCode: StatusCodes.Status409Conflict);
+            return greeting.FirstError.ToProblem();
         }
 
-        return TypedResults.Ok(new GreetingResponse(
-            Greeter.Greet(request.Name, request.Age),
-            timeProvider.GetUtcNow()));
+        return TypedResults.Ok(new GreetingResponse(greeting.Value, timeProvider.GetUtcNow()));
     }
 }

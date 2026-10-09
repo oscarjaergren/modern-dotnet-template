@@ -56,8 +56,6 @@ substitute. Failures are returned, not thrown. There is no Domain/Application/In
 1. **A data layer**, once you know what you store. Read [adding-a-database.md](adding-a-database.md)
    first: it decides whether AOT stays.
 2. **Auth**, once there is something to protect. It constrains every endpoint.
-3. **A domain result type**, once there are multi-step operations. C# 15 unions are worth waiting
-   for.
-4. **A dispatch library**, only if you keep hand-writing the same pipeline.
+3. **A dispatch library**, only if you keep hand-writing the same pipeline.
 
 Messaging, caching and multi-tenancy come easier after these, and are hard to remove if added early.

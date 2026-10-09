@@ -29,8 +29,8 @@ first use of a library becomes the convention.
   carrying the explanation. Adding one later is easy; removing one from fifty tests isn't.
 - **Validation (FluentValidation).** The built-in validation is source-generated and AOT-safe. Its
   two wiring traps are in `AGENTS.md`.
-- **Result types (ErrorOr, FluentResults, OneOf).** `Results<...>` covers the HTTP boundary, and C#
-  15 unions will cover the domain; see [errors-and-failures.md](errors-and-failures.md).
+- **A second result type (FluentResults, OneOf).** The template uses `ErrorOr`; see
+  [errors-and-failures.md](errors-and-failures.md).
 - **API docs UI (Scalar, Swagger UI).** The committed `openapi.json` is the contract; `Api.http`
   covers manual testing. Aspire's dashboard has no UI for it, so you'd have none, but Scalar is one
   package and one line away.

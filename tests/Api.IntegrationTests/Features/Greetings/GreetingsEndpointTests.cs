@@ -31,7 +31,7 @@ public class GreetingsEndpointTests(ApiFixture fixture)
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        Assert.Equal("Name is reserved.", body.RootElement.GetProperty("title").GetString());
+        Assert.Equal("'admin' is reserved.", body.RootElement.GetProperty("detail").GetString());
         Assert.Equal(409, body.RootElement.GetProperty("status").GetInt32());
         Assert.True(body.RootElement.TryGetProperty("traceId", out _));
     }
