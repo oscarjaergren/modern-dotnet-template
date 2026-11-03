@@ -30,10 +30,15 @@ review: the Bookings fixture has a real one (`DateOnly.AddDays` overflows).
 
 ## When to run it
 
-When an agent's prompt, tools or model changes, before merging. Not on every pull request: code
-changes don't change the agent. The held-out cases are 40 reviews and 40 Opus judge calls, about 7
-minutes; the judge uses most of the allowance. Keep a change only if it beats the noise without
-losing catches.
+Run it whenever something the agent depends on changes, before you rely on the change:
+
+- its prompt, skill or tools;
+- its model, including a new release or a bigger tier; a stronger model can still be a worse fit;
+- the harness: a Claude Code upgrade, CI's settings, or another agent tool;
+- a miss in real use: add it as a case first, so the fix is measured.
+
+Not on every pull request: code changes don't change the agent. Cost scales with cases × runs × the
+models used, and the judge is usually the biggest part.
 
 ## Reproducing it
 

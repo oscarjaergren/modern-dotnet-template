@@ -67,7 +67,7 @@ the task that sends you there. There are no ADRs:
 
 Agent prompts are tested like code. The `slice-reviewer` agent has an eval: 40 changes with planted
 defects or none, graded by a judge model. It is why the reviewer runs on Haiku: it catches what
-Sonnet does at an eighth of the API price. Run it when an agent's prompt or model changes:
+Sonnet does at an eighth of the API price. Rerun it when a prompt, model or harness changes:
 [evaluating-agents.md](docs/evaluating-agents.md).
 
 Prior art: Jeremy Miller, *The Codebase Is the Prompt* (June 2026), argues the same thesis, with the
