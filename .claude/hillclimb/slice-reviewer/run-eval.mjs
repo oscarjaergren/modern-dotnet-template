@@ -139,10 +139,10 @@ const REF_EXTS = ['', '.html', '.txt', '.json'];
 //
 // The app under test is the slice-reviewer agent (.claude/agents/slice-reviewer.md), run the way
 // CI runs it: `claude -p` in a checkout, read-only tools. Each (case, rep) gets a fresh workspace:
-// the template at PINNED plus cases/main.patch on `main`, and the case's patch on `review`. The
+// the template at PINNED on `main`, and the case's patch on `review`. The
 // workspace never contains this directory, so labels and the review sheet are out of reach.
 
-const PINNED = '44e7253';
+const PINNED = 'a342b70';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = execFileSync('git', ['-C', HERE, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 const TOOLS = 'Read,Grep,Glob,Bash';
@@ -168,7 +168,6 @@ function makeWorkspace(input) {
   execFileSync('bash', ['-c', `git -C "$1" archive ${PINNED} | tar -x -C "$2"`, '_', REPO, ws]);
   rmSync(join(ws, '.claude', 'hillclimb'), { recursive: true, force: true });
   git(ws, 'init', '-q', '-b', 'main');
-  git(ws, 'apply', join(HERE, 'cases', 'main.patch'));
   // The agent under test is the working tree's, so an edited prompt is what runs.
   copyFileSync(join(REPO, '.claude', 'agents', 'slice-reviewer.md'), join(ws, '.claude', 'agents', 'slice-reviewer.md'));
   git(ws, 'add', '-A');

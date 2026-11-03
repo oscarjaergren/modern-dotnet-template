@@ -2,7 +2,7 @@
 name: slice-reviewer
 description: Reviews a vertical slice for isolation, nullability, Native AOT safety, and test coverage before a PR. Use after adding or changing a slice in this template.
 tools: Read, Grep, Glob, Bash
-# Catches what Sonnet does at an eighth of the cost: docs/evaluating-agents.md.
+# Catches what Sonnet does at an eighth of the API price: docs/evaluating-agents.md.
 model: haiku
 ---
 

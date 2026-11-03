@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generates the slice-reviewer eval cases.
 
-Each case is the template at PINNED (plus main.patch, so it restores) with one change on a
+Each case is the template at PINNED with one change on a
 `review` branch. Most add the Bookings or Notes slice from fixtures/, with or without a planted
 defect; the rest change the existing Greetings slice. For every case this builds the workspace,
 regenerates openapi.json (unless the case is about a stale one), runs the tests, and writes:
@@ -15,7 +15,7 @@ Usage: build_cases.py [--only id,id] [--skip-tests]
 import argparse, json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
-PINNED = "44e7253"
+PINNED = "a342b70"
 HERE = Path(__file__).resolve().parent
 REPO = Path(subprocess.check_output(["git", "-C", str(HERE), "rev-parse", "--show-toplevel"], text=True).strip())
 GEN = HERE / "generated"
@@ -718,7 +718,6 @@ def build_case(case, skip_tests):
         sh("bash", "-c", f"git -C {REPO} archive {PINNED} | tar -x -C {ws}", cwd=ws)
         shutil.rmtree(ws / ".claude" / "hillclimb", ignore_errors=True)
         sh("git", "init", "-q", "-b", "main", cwd=ws)
-        sh("git", "apply", str(HERE / "main.patch"), cwd=ws)
         sh("git", "add", "-A", cwd=ws)
         sh("git", "-c", "user.name=eval", "-c", "user.email=eval@example.invalid", "commit", "-q", "-m", "main", cwd=ws)
 
@@ -775,7 +774,7 @@ def mutation_diff(case):
 
 def review_sheet(rows):
     out = ["# slice-reviewer eval cases", "",
-           f"Each case is `{PINNED}` plus `cases/main.patch` on `main`, and the case's patch on a `review` branch.",
+           f"Each case is `{PINNED}` on `main`, and the case's patch on a `review` branch.",
            "The reviewer gets the prompt and the workspace; it never sees the label or this file.", "",
            "| id | slice | expected | check | build | tests |", "|---|---|---|---|---|---|"]
     for r in rows:

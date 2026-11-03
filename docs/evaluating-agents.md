@@ -22,17 +22,18 @@ Held-out cases, 2 runs each:
 | Planted defect caught     | 28/28  | 28/28  | 27/28              |
 | No false alarm            | 63%    | 85%    | 85%                |
 | No "couldn't build" hedge | 0%     | 0%     | 95%                |
-| Review cost per case      | $0.064 | $0.008 | $0.006             |
+| API price per review      | $0.064 | $0.008 | $0.006             |
 
-Haiku catches what Sonnet does, at an eighth of the cost. The `v2` prompt stops the hedging without
+Haiku catches what Sonnet does, at an eighth of the API price. The `v2` prompt stops the hedging without
 losing catches. Noise is about ±15 points at 40 runs. Other real defects don't count against a
 review: the Bookings fixture has a real one (`DateOnly.AddDays` overflows).
 
 ## When to run it
 
 When an agent's prompt, tools or model changes, before merging. Not on every pull request: code
-changes don't change the agent. The held-out cases are 40 sessions, about 7 minutes and $2 at API
-prices. Keep a change only if it beats the noise without losing catches.
+changes don't change the agent. The held-out cases are 40 reviews and 40 Opus judge calls, about 7
+minutes; the judge uses most of the allowance. Keep a change only if it beats the noise without
+losing catches.
 
 ## Reproducing it
 
