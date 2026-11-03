@@ -11,6 +11,11 @@
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.4" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
+    <!--
+      Transitive pin, added when Aspire's hosting packages pulled in a MessagePack with a
+      moderate-severity advisory (GHSA-qhrr-8q5h-9q3h). Remove once Aspire ships a fixed version.
+    -->
+    <PackageVersion Include="MessagePack" Version="2.5.307" />
   </ItemGroup>
 
   <ItemGroup Label="OpenTelemetry">
