@@ -1,0 +1,117 @@
+{
+  "metrics": [
+    {
+      "id": "no_false_alarm",
+      "label": "No false alarm",
+      "kind": "binary"
+    },
+    {
+      "id": "caught",
+      "label": "Caught",
+      "kind": "binary"
+    },
+    {
+      "id": "no_hedge",
+      "label": "No build/test hedge",
+      "kind": "binary"
+    },
+    {
+      "id": "raised",
+      "label": "Raised at all",
+      "kind": "binary"
+    },
+    {
+      "id": "false_alarms",
+      "label": "False alarms",
+      "kind": "float",
+      "scale": 5,
+      "better": "lower"
+    },
+    {
+      "id": "other_real",
+      "label": "Other real",
+      "kind": "float",
+      "scale": 5
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "cost_usd",
+      "label": "Cost",
+      "unit": "$"
+    },
+    {
+      "id": "latency_s",
+      "label": "Latency",
+      "unit": "s"
+    },
+    {
+      "id": "tool_calls",
+      "label": "Tool calls"
+    },
+    {
+      "id": "turns",
+      "label": "Turns"
+    }
+  ],
+  "harness_paths": [
+    ".claude/hillclimb/slice-reviewer/cases/cases.jsonl",
+    ".claude/agents/slice-reviewer.md"
+  ],
+  "harness_sha": "9cfbd33e091fd7afd8c5d214c9ca934bbee4ddd56b44143ccc8ac9ffd24b998a",
+  "reps": 2,
+  "goal": {
+    "target": "no_false_alarm",
+    "direction": "higher",
+    "hold": [
+      "caught"
+    ],
+    "note": "caught saturated at 100% on both models at baseline; climbing false alarms instead"
+  },
+  "approve_each_round": true,
+  "train_ids": [
+    "c1-bookings-no-modifier",
+    "c1-greetings-made-internal",
+    "c2-bookings-response-unregistered",
+    "c2-notes-response-unregistered",
+    "c3-bookings-qualified-greeter",
+    "c3-notes-qualified-greeter",
+    "c4-bookings-newtonsoft",
+    "c4-notes-reflection-etag",
+    "c5-bookings-note-bang",
+    "c5-greetings-nickname-bang",
+    "c6-bookings-typed-assertions",
+    "c6-bookings-unit-tests-misplaced",
+    "c7-bookings-openapi-not-regenerated",
+    "c7-notes-route-openapi-stale",
+    "k-bookings-nested-type",
+    "k-bookings-redundant-bang",
+    "k-greetings-wording",
+    "k-notes-aot-safe-etag",
+    "k-notes-clean",
+    "k-notes-search-public"
+  ],
+  "test_ids": [
+    "c1-bookings-internal-request",
+    "c1-notes-internal-search-request",
+    "c2-bookings-request-unregistered",
+    "c2-notes-list-unregistered",
+    "c3-bookings-embeds-greeting-request",
+    "c3-bookings-using-greeter",
+    "c4-bookings-suppressed-il2026",
+    "c4-greetings-pragma-echo",
+    "c5-bookings-user-agent-bang",
+    "c5-notes-tags-bang",
+    "c6-bookings-no-400-tests",
+    "c6-notes-no-integration-tests",
+    "c7-bookings-409-undeclared",
+    "c7-greetings-field-openapi-stale",
+    "k-bookings-409-declared",
+    "k-bookings-clean",
+    "k-bookings-internal-helper-record",
+    "k-bookings-shared-helper",
+    "k-greetings-field-regenerated",
+    "k-greetings-tests-only"
+  ],
+  "split_seed": 20261101
+}

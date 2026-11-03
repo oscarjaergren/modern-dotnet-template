@@ -1,0 +1,394 @@
+diff --git a/src/Api/ApiJsonSerializerContext.cs b/src/Api/ApiJsonSerializerContext.cs
+index f633230..2e330bb 100644
+--- a/src/Api/ApiJsonSerializerContext.cs
++++ b/src/Api/ApiJsonSerializerContext.cs
+@@ -1,5 +1,6 @@
+ using System.Text.Json.Serialization;
+ using Api.Features.Greetings;
++using Api.Features.Bookings;
+ using Api.Features.Ping;
+ using Microsoft.AspNetCore.Mvc;
+ 
+@@ -12,6 +13,8 @@ namespace Api;
+ [JsonSerializable(typeof(PingResponse))]
+ [JsonSerializable(typeof(GreetingRequest))]
+ [JsonSerializable(typeof(GreetingResponse))]
++[JsonSerializable(typeof(BookingRequest))]
++[JsonSerializable(typeof(BookingResponse))]
+ [JsonSerializable(typeof(HttpValidationProblemDetails))]
+ [JsonSerializable(typeof(ProblemDetails))]
+ internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;
+diff --git a/src/Api/Features/Bookings/BookingDesk.cs b/src/Api/Features/Bookings/BookingDesk.cs
+new file mode 100644
+index 0000000..38fc03e
+--- /dev/null
++++ b/src/Api/Features/Bookings/BookingDesk.cs
+@@ -0,0 +1,26 @@
++using ErrorOr;
++
++namespace Api.Features.Bookings;
++
++/// <summary>
++/// The slice's logic, free of HTTP so it can be unit tested directly.
++/// </summary>
++internal static class BookingDesk
++{
++    internal static ErrorOr<BookingResponse> Book(BookingRequest request, DateOnly today)
++    {
++        if (request.Arrival < today)
++        {
++            return Error.Validation("Bookings.ArrivalInPast", "Arrival must be today or later.");
++        }
++
++        var note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
++
++        return new BookingResponse(
++            $"BK-{request.Arrival:yyyyMMdd}-{request.Nights:D2}",
++            request.GuestName,
++            request.Arrival,
++            request.Arrival.AddDays(request.Nights),
++            note);
++    }
++}
+diff --git a/src/Api/Features/Bookings/BookingRequest.cs b/src/Api/Features/Bookings/BookingRequest.cs
+new file mode 100644
+index 0000000..9e1e387
+--- /dev/null
++++ b/src/Api/Features/Bookings/BookingRequest.cs
+@@ -0,0 +1,26 @@
++using System.ComponentModel.DataAnnotations;
++
++namespace Api.Features.Bookings;
++
++/// <summary>
++/// Request body for <c>POST /bookings</c>.
++/// </summary>
++public sealed record BookingRequest
++{
++    /// <summary>Name the booking is held under.</summary>
++    [Required]
++    [StringLength(80, MinimumLength = 1)]
++    public required string GuestName { get; init; }
++
++    /// <summary>First night of the stay.</summary>
++    [Required]
++    public required DateOnly Arrival { get; init; }
++
++    /// <summary>Length of the stay, in nights.</summary>
++    [Range(1, 30)]
++    public required int Nights { get; init; }
++
++    /// <summary>Optional note for the front desk.</summary>
++    [StringLength(200)]
++    public string? Note { get; init; }
++}
+diff --git a/src/Api/Features/Bookings/BookingResponse.cs b/src/Api/Features/Bookings/BookingResponse.cs
+new file mode 100644
+index 0000000..8a84c91
+--- /dev/null
++++ b/src/Api/Features/Bookings/BookingResponse.cs
+@@ -0,0 +1,13 @@
++namespace Api.Features.Bookings;
++
++/// <param name="Reference">Quote this when contacting the hotel.</param>
++/// <param name="GuestName">Name the booking is held under.</param>
++/// <param name="Arrival">First night of the stay.</param>
++/// <param name="Departure">The morning the guest leaves.</param>
++/// <param name="Note">The front-desk note, trimmed, if one was given.</param>
++public sealed record BookingResponse(
++    string Reference,
++    string GuestName,
++    DateOnly Arrival,
++    DateOnly Departure,
++    string? Note);
+diff --git a/src/Api/Features/Bookings/BookingsEndpoint.cs b/src/Api/Features/Bookings/BookingsEndpoint.cs
+new file mode 100644
+index 0000000..f4247e9
+--- /dev/null
++++ b/src/Api/Features/Bookings/BookingsEndpoint.cs
+@@ -0,0 +1,33 @@
++using Api.Infrastructure;
++using Microsoft.AspNetCore.Http.HttpResults;
++
++namespace Api.Features.Bookings;
++
++internal static class BookingsEndpoint
++{
++    internal static IEndpointRouteBuilder MapBookings(this IEndpointRouteBuilder app)
++    {
++        app.MapPost("/bookings", Handle)
++            .WithName("CreateBooking")
++            .WithSummary("Books a stay.")
++            // Not ProducesProblem(400): it would replace the validation schema, and this one also
++            // describes the plain ProblemDetails a past arrival returns.
++            .ProducesValidationProblem();
++
++        return app;
++    }
++
++    private static Results<Ok<BookingResponse>, ValidationProblem, ProblemHttpResult> Handle(
++        BookingRequest request,
++        TimeProvider timeProvider)
++    {
++        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
++        var booking = BookingDesk.Book(request, today);
++        if (booking.IsError)
++        {
++            return booking.FirstError.ToProblem();
++        }
++
++        return TypedResults.Ok(booking.Value);
++    }
++}
+diff --git a/src/Api/Program.cs b/src/Api/Program.cs
+index b427058..723ae02 100644
+--- a/src/Api/Program.cs
++++ b/src/Api/Program.cs
+@@ -1,6 +1,7 @@
+ using System.Text.Json.Serialization;
+ using Api;
+ using Api.Features.Greetings;
++using Api.Features.Bookings;
+ using Api.Features.Ping;
+ using Api.Infrastructure;
+ 
+@@ -57,5 +58,6 @@
+ // One line per slice, no assembly scanning: every route is visible here.
+ app.MapPing();
+ app.MapGreetings();
++app.MapBookings();
+ 
+ await app.RunAsync();
+diff --git a/src/Api/openapi.json b/src/Api/openapi.json
+index 88a896b..7d4ecd3 100644
+--- a/src/Api/openapi.json
++++ b/src/Api/openapi.json
+@@ -78,10 +78,126 @@
+           }
+         }
+       }
++    },
++    "/bookings": {
++      "post": {
++        "tags": [
++          "BookingsEndpoint"
++        ],
++        "summary": "Books a stay.",
++        "operationId": "CreateBooking",
++        "requestBody": {
++          "content": {
++            "application/json": {
++              "schema": {
++                "$ref": "#/components/schemas/BookingRequest"
++              }
++            }
++          },
++          "required": true
++        },
++        "responses": {
++          "200": {
++            "description": "OK",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/BookingResponse"
++                }
++              }
++            }
++          },
++          "400": {
++            "description": "Bad Request",
++            "content": {
++              "application/problem+json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
++                }
++              }
++            }
++          }
++        }
++      }
+     }
+   },
+   "components": {
+     "schemas": {
++      "BookingRequest": {
++        "required": [
++          "guestName",
++          "arrival",
++          "nights"
++        ],
++        "type": "object",
++        "properties": {
++          "guestName": {
++            "maxLength": 80,
++            "minLength": 1,
++            "type": "string",
++            "description": "Name the booking is held under."
++          },
++          "arrival": {
++            "type": "string",
++            "description": "First night of the stay.",
++            "format": "date"
++          },
++          "nights": {
++            "maximum": 30,
++            "minimum": 1,
++            "type": "integer",
++            "description": "Length of the stay, in nights.",
++            "format": "int32"
++          },
++          "note": {
++            "maxLength": 200,
++            "minLength": 0,
++            "type": [
++              "null",
++              "string"
++            ],
++            "description": "Optional note for the front desk."
++          }
++        },
++        "description": "Request body for `POST /bookings`."
++      },
++      "BookingResponse": {
++        "required": [
++          "reference",
++          "guestName",
++          "arrival",
++          "departure",
++          "note"
++        ],
++        "type": "object",
++        "properties": {
++          "reference": {
++            "type": "string",
++            "description": "Quote this when contacting the hotel."
++          },
++          "guestName": {
++            "type": "string",
++            "description": "Name the booking is held under."
++          },
++          "arrival": {
++            "type": "string",
++            "description": "First night of the stay.",
++            "format": "date"
++          },
++          "departure": {
++            "type": "string",
++            "description": "The morning the guest leaves.",
++            "format": "date"
++          },
++          "note": {
++            "type": [
++              "null",
++              "string"
++            ],
++            "description": "The front-desk note, trimmed, if one was given."
++          }
++        }
++      },
+       "GreetingRequest": {
+         "required": [
+           "name"
+@@ -232,6 +348,9 @@
+     },
+     {
+       "name": "GreetingsEndpoint"
++    },
++    {
++      "name": "BookingsEndpoint"
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/tests/Api.IntegrationTests/Features/Bookings/BookingsEndpointTests.cs b/tests/Api.IntegrationTests/Features/Bookings/BookingsEndpointTests.cs
+new file mode 100644
+index 0000000..94a0d2f
+--- /dev/null
++++ b/tests/Api.IntegrationTests/Features/Bookings/BookingsEndpointTests.cs
+@@ -0,0 +1,35 @@
++using System.Net.Http.Json;
++
++namespace Api.IntegrationTests.Features.Bookings;
++
++[Collection(nameof(ApiCollection))]
++public class BookingsEndpointTests(ApiFixture fixture)
++{
++    private static readonly string FarFuture = "2099-06-01";
++
++    private Task<HttpResponseMessage> Post(object payload) =>
++        fixture.Client.PostAsJsonAsync("/bookings", payload, TestContext.Current.CancellationToken);
++
++    [Fact]
++    public async Task Post_bookings_returns_the_booking()
++    {
++        using var response = await Post(new { guestName = "Ada", arrival = FarFuture, nights = 2 });
++        using var body = await response.ReadJsonAsync();
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal("BK-20990601-02", body.RootElement.GetProperty("reference").GetString());
++        Assert.Equal("2099-06-03", body.RootElement.GetProperty("departure").GetString());
++    }
++
++    [Fact]
++    public async Task Post_bookings_rejects_an_arrival_in_the_past()
++    {
++        using var response = await Post(new { guestName = "Ada", arrival = "2000-01-01", nights = 1 });
++        using var body = await response.ReadJsonAsync();
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
++        Assert.True(body.RootElement.TryGetProperty("traceId", out _));
++    }
++
++}
+diff --git a/tests/Api.UnitTests/Features/Bookings/BookingDeskTests.cs b/tests/Api.UnitTests/Features/Bookings/BookingDeskTests.cs
+new file mode 100644
+index 0000000..afd7525
+--- /dev/null
++++ b/tests/Api.UnitTests/Features/Bookings/BookingDeskTests.cs
+@@ -0,0 +1,44 @@
++using Api.Features.Bookings;
++using ErrorOr;
++
++namespace Api.UnitTests.Features.Bookings;
++
++public class BookingDeskTests
++{
++    private static readonly DateOnly Today = new(2026, 11, 1);
++
++    private static BookingRequest Request(DateOnly arrival, int nights = 1, string? note = null) =>
++        new() { GuestName = "Ada", Arrival = arrival, Nights = nights, Note = note };
++
++    [Fact]
++    public void Departure_is_arrival_plus_the_nights()
++    {
++        var booking = BookingDesk.Book(Request(Today, nights: 3), Today).Value;
++
++        Assert.Equal(new DateOnly(2026, 11, 4), booking.Departure);
++    }
++
++    [Fact]
++    public void The_reference_encodes_arrival_and_nights()
++    {
++        var booking = BookingDesk.Book(Request(Today, nights: 3), Today).Value;
++
++        Assert.Equal("BK-20261101-03", booking.Reference);
++    }
++
++    [Fact]
++    public void An_arrival_in_the_past_is_a_validation_error()
++    {
++        var error = Assert.Single(BookingDesk.Book(Request(Today.AddDays(-1)), Today).Errors);
++
++        Assert.Equal(ErrorType.Validation, error.Type);
++        Assert.Equal("Bookings.ArrivalInPast", error.Code);
++    }
++
++    [Theory]
++    [InlineData(null, null)]
++    [InlineData("   ", null)]
++    [InlineData("  late check-in ", "late check-in")]
++    public void The_note_is_trimmed_and_blank_becomes_null(string? note, string? expected) =>
++        Assert.Equal(expected, BookingDesk.Book(Request(Today, note: note), Today).Value.Note);
++}

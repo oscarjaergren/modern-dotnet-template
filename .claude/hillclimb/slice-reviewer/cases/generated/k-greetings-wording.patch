@@ -1,0 +1,26 @@
+diff --git a/src/Api/Features/Greetings/GreetingsEndpoint.cs b/src/Api/Features/Greetings/GreetingsEndpoint.cs
+index 22ad113..b7648c9 100644
+--- a/src/Api/Features/Greetings/GreetingsEndpoint.cs
++++ b/src/Api/Features/Greetings/GreetingsEndpoint.cs
+@@ -14,7 +14,7 @@ internal static IEndpointRouteBuilder MapGreetings(this IEndpointRouteBuilder ap
+         app.MapPost("/greetings", Handle)
+             .WithName("CreateGreeting")
+             .WithSummary("Composes a greeting.")
+-            .WithDescription("Demonstrates request validation, a typed response, and slice-local logic.")
++            .WithDescription("Greets a person by name, and by age when given. Some names are reserved.")
+             // ProblemHttpResult has no compile-time status, so the 409 must be declared or it is
+             // missing from openapi.json.
+             .ProducesProblem(StatusCodes.Status409Conflict);
+diff --git a/src/Api/openapi.json b/src/Api/openapi.json
+index 88a896b..6af38f4 100644
+--- a/src/Api/openapi.json
++++ b/src/Api/openapi.json
+@@ -33,7 +33,7 @@
+           "GreetingsEndpoint"
+         ],
+         "summary": "Composes a greeting.",
+-        "description": "Demonstrates request validation, a typed response, and slice-local logic.",
++        "description": "Greets a person by name, and by age when given. Some names are reserved.",
+         "operationId": "CreateGreeting",
+         "requestBody": {
+           "content": {
