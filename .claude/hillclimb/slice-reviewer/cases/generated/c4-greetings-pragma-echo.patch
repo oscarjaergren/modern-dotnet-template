@@ -1,0 +1,70 @@
+diff --git a/src/Api/Features/Greetings/Greeter.cs b/src/Api/Features/Greetings/Greeter.cs
+index 2a36982..3f71bf4 100644
+--- a/src/Api/Features/Greetings/Greeter.cs
++++ b/src/Api/Features/Greetings/Greeter.cs
+@@ -1,4 +1,5 @@
+ using System.Collections.Frozen;
++using System.Text.Json;
+ using ErrorOr;
+ 
+ namespace Api.Features.Greetings;
+@@ -17,6 +18,11 @@ internal static class Greeter
+     private static readonly FrozenSet<string> ReservedNames =
+         FrozenSet.Create(StringComparer.OrdinalIgnoreCase, "admin", "root", "system");
+ 
++    // Echoes the request back, for debugging clients.
++#pragma warning disable IL2026, IL3050
++    internal static string Echo(GreetingRequest request) => JsonSerializer.Serialize(request);
++#pragma warning restore IL2026, IL3050
++
+     internal static ErrorOr<string> Greet(string name, int? age)
+     {
+         if (ReservedNames.Contains(name.Trim()))
+diff --git a/src/Api/Features/Greetings/GreetingResponse.cs b/src/Api/Features/Greetings/GreetingResponse.cs
+index 28e1c50..f30a354 100644
+--- a/src/Api/Features/Greetings/GreetingResponse.cs
++++ b/src/Api/Features/Greetings/GreetingResponse.cs
+@@ -2,4 +2,5 @@ namespace Api.Features.Greetings;
+ 
+ /// <param name="Message">The composed greeting.</param>
+ /// <param name="GreetedAt">Server time when the greeting was composed.</param>
+-public sealed record GreetingResponse(string Message, DateTimeOffset GreetedAt);
++/// <param name="Echo">The request as the server read it.</param>
++public sealed record GreetingResponse(string Message, DateTimeOffset GreetedAt, string Echo);
+diff --git a/src/Api/Features/Greetings/GreetingsEndpoint.cs b/src/Api/Features/Greetings/GreetingsEndpoint.cs
+index 22ad113..59ea1f0 100644
+--- a/src/Api/Features/Greetings/GreetingsEndpoint.cs
++++ b/src/Api/Features/Greetings/GreetingsEndpoint.cs
+@@ -35,6 +35,6 @@ internal static IEndpointRouteBuilder MapGreetings(this IEndpointRouteBuilder ap
+             return greeting.FirstError.ToProblem();
+         }
+ 
+-        return TypedResults.Ok(new GreetingResponse(greeting.Value, timeProvider.GetUtcNow()));
++        return TypedResults.Ok(new GreetingResponse(greeting.Value, timeProvider.GetUtcNow(), Greeter.Echo(request)));
+     }
+ }
+diff --git a/src/Api/openapi.json b/src/Api/openapi.json
+index 88a896b..9f86ead 100644
+--- a/src/Api/openapi.json
++++ b/src/Api/openapi.json
+@@ -110,7 +110,8 @@
+       "GreetingResponse": {
+         "required": [
+           "message",
+-          "greetedAt"
++          "greetedAt",
++          "echo"
+         ],
+         "type": "object",
+         "properties": {
+@@ -122,6 +123,10 @@
+             "type": "string",
+             "description": "Server time when the greeting was composed.",
+             "format": "date-time"
++          },
++          "echo": {
++            "type": "string",
++            "description": "The request as the server read it."
+           }
+         }
+       },

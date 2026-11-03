@@ -106,6 +106,7 @@ Open a page only when its trigger matches.
 | If you're…                                                   | Read                                                                   |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
 | working here with an agent, or weighing a token-saving tool  | [docs/ai-workflow.md](docs/ai-workflow.md)                             |
+| changing an agent, skill or prompt, or choosing its model    | [docs/evaluating-agents.md](docs/evaluating-agents.md)                 |
 | writing C#, or wondering why the code looks like this        | [docs/code-style.md](docs/code-style.md)                               |
 | blocked by a hook, or adding a check                         | [docs/linting-and-hooks.md](docs/linting-and-hooks.md)                 |
 | defining a request, response or value object                 | [docs/data-models.md](docs/data-models.md)                             |

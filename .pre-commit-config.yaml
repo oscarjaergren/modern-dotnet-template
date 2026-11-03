@@ -50,6 +50,8 @@ repos:
         name: typos (spelling)
         entry: mise exec -- typos --force-exclude
         language: system
+        # Eval cases are patches, and their blob hashes read as misspellings.
+        exclude: ^\.claude/hillclimb/.*\.patch$
 
       # --- whitespace / EOL on the file types dotnet format never sees -------------------------
       - id: editorconfig-checker
