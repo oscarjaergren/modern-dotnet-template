@@ -12,7 +12,7 @@ the layout, the gates and the instruction files are designed to be worked in by 
 | Deployment    | Native AOT, **~15 MB** container image (CI fails above 20), no Dockerfile |
 | Tests         | xUnit v3: unit, integration (via Aspire), architecture                    |
 | Contract      | `openapi.json` generated at build, committed, drift-gated, fuzzed in CI   |
-| Agents        | `AGENTS.md`, a slice skill, subagents, a format hook, deny rules          |
+| Agents        | `AGENTS.md`, a slice skill, subagents, a format hook, deny rules, an eval |
 
 ## Quickstart
 
@@ -64,6 +64,11 @@ fail silently, such as an
 `internal` request type turning off validation, and indexes `docs/`, where each page is named for
 the task that sends you there. There are no ADRs:
 [documentation-approach.md](docs/documentation-approach.md) explains why.
+
+Agent prompts are tested like code. The `slice-reviewer` agent has an eval: 40 changes with planted
+defects or none, graded by a judge model. It is why the reviewer runs on Haiku: it catches what
+Sonnet does at an eighth of the cost. Run it when an agent's prompt or model changes:
+[evaluating-agents.md](docs/evaluating-agents.md).
 
 Prior art: Jeremy Miller, *The Codebase Is the Prompt* (June 2026), argues the same thesis, with the
 caveat that conventions must be written down for any of it to work.

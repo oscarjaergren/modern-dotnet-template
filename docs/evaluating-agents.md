@@ -28,6 +28,12 @@ Haiku catches what Sonnet does, at an eighth of the cost. The `v2` prompt stops 
 losing catches. Noise is about ±15 points at 40 runs. Other real defects don't count against a
 review: the Bookings fixture has a real one (`DateOnly.AddDays` overflows).
 
+## When to run it
+
+When an agent's prompt, tools or model changes, before merging. Not on every pull request: code
+changes don't change the agent. The held-out cases are 40 sessions, about 7 minutes and $2 at API
+prices. Keep a change only if it beats the noise without losing catches.
+
 ## Reproducing it
 
 Needs the signed-in `claude` CLI and Node 24. From the repo root:
