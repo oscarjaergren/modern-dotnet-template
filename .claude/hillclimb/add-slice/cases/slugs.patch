@@ -1,0 +1,320 @@
+diff --git a/src/Api/ApiJsonSerializerContext.cs b/src/Api/ApiJsonSerializerContext.cs
+index f633230..ef23235 100644
+--- a/src/Api/ApiJsonSerializerContext.cs
++++ b/src/Api/ApiJsonSerializerContext.cs
+@@ -1,6 +1,7 @@
+ using System.Text.Json.Serialization;
+ using Api.Features.Greetings;
+ using Api.Features.Ping;
++using Api.Features.Slugs;
+ using Microsoft.AspNetCore.Mvc;
+ 
+ namespace Api;
+@@ -12,6 +13,8 @@ namespace Api;
+ [JsonSerializable(typeof(PingResponse))]
+ [JsonSerializable(typeof(GreetingRequest))]
+ [JsonSerializable(typeof(GreetingResponse))]
++[JsonSerializable(typeof(SlugRequest))]
++[JsonSerializable(typeof(SlugResponse))]
+ [JsonSerializable(typeof(HttpValidationProblemDetails))]
+ [JsonSerializable(typeof(ProblemDetails))]
+ internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;
+diff --git a/src/Api/Features/Slugs/SlugRequest.cs b/src/Api/Features/Slugs/SlugRequest.cs
+new file mode 100644
+index 0000000..f6a57d9
+--- /dev/null
++++ b/src/Api/Features/Slugs/SlugRequest.cs
+@@ -0,0 +1,14 @@
++using System.ComponentModel.DataAnnotations;
++
++namespace Api.Features.Slugs;
++
++/// <summary>
++/// Request body for <c>POST /slugs</c>.
++/// </summary>
++public sealed record SlugRequest
++{
++    /// <summary>The title to turn into a slug.</summary>
++    [Required]
++    [StringLength(80, MinimumLength = 1)]
++    public required string Title { get; init; }
++}
+diff --git a/src/Api/Features/Slugs/SlugResponse.cs b/src/Api/Features/Slugs/SlugResponse.cs
+new file mode 100644
+index 0000000..87ca711
+--- /dev/null
++++ b/src/Api/Features/Slugs/SlugResponse.cs
+@@ -0,0 +1,4 @@
++namespace Api.Features.Slugs;
++
++/// <param name="Slug">Lower-case letters and digits, separated by single hyphens.</param>
++public sealed record SlugResponse(string Slug);
+diff --git a/src/Api/Features/Slugs/Slugifier.cs b/src/Api/Features/Slugs/Slugifier.cs
+new file mode 100644
+index 0000000..581d909
+--- /dev/null
++++ b/src/Api/Features/Slugs/Slugifier.cs
+@@ -0,0 +1,28 @@
++using System.Text;
++using ErrorOr;
++
++namespace Api.Features.Slugs;
++
++internal static class Slugifier
++{
++    internal static ErrorOr<string> Slugify(string title)
++    {
++        var slug = new StringBuilder(title.Length);
++        foreach (var c in title)
++        {
++            if (char.IsAsciiLetterOrDigit(c))
++            {
++                slug.Append(char.ToLowerInvariant(c));
++            }
++            else if (slug.Length > 0 && slug[^1] != '-')
++            {
++                slug.Append('-');
++            }
++        }
++
++        var result = slug.ToString().TrimEnd('-');
++        return result.Length == 0
++            ? Error.Validation("Slugs.Empty", "The title has no letters or digits.")
++            : result;
++    }
++}
+diff --git a/src/Api/Features/Slugs/SlugsEndpoint.cs b/src/Api/Features/Slugs/SlugsEndpoint.cs
+new file mode 100644
+index 0000000..badaa46
+--- /dev/null
++++ b/src/Api/Features/Slugs/SlugsEndpoint.cs
+@@ -0,0 +1,29 @@
++using Api.Infrastructure;
++using Microsoft.AspNetCore.Http.HttpResults;
++
++namespace Api.Features.Slugs;
++
++internal static class SlugsEndpoint
++{
++    internal static IEndpointRouteBuilder MapSlugs(this IEndpointRouteBuilder app)
++    {
++        app.MapPost("/slugs", Handle)
++            .WithName("CreateSlug")
++            .WithSummary("Turns a title into a URL slug.")
++            // Not ProducesProblem(400): it would replace the validation schema.
++            .ProducesValidationProblem();
++
++        return app;
++    }
++
++    private static Results<Ok<SlugResponse>, ValidationProblem, ProblemHttpResult> Handle(SlugRequest request)
++    {
++        var slug = Slugifier.Slugify(request.Title);
++        if (slug.IsError)
++        {
++            return slug.FirstError.ToProblem();
++        }
++
++        return TypedResults.Ok(new SlugResponse(slug.Value));
++    }
++}
+diff --git a/src/Api/Program.cs b/src/Api/Program.cs
+index b427058..25c2357 100644
+--- a/src/Api/Program.cs
++++ b/src/Api/Program.cs
+@@ -2,6 +2,7 @@
+ using Api;
+ using Api.Features.Greetings;
+ using Api.Features.Ping;
++using Api.Features.Slugs;
+ using Api.Infrastructure;
+ 
+ // The slim host omits reflection-heavy defaults that Native AOT cannot trim.
+@@ -57,5 +58,6 @@
+ // One line per slice, no assembly scanning: every route is visible here.
+ app.MapPing();
+ app.MapGreetings();
++app.MapSlugs();
+ 
+ await app.RunAsync();
+diff --git a/src/Api/openapi.json b/src/Api/openapi.json
+index 88a896b..dcc64bf 100644
+--- a/src/Api/openapi.json
++++ b/src/Api/openapi.json
+@@ -78,6 +78,47 @@
+           }
+         }
+       }
++    },
++    "/slugs": {
++      "post": {
++        "tags": [
++          "SlugsEndpoint"
++        ],
++        "summary": "Turns a title into a URL slug.",
++        "operationId": "CreateSlug",
++        "requestBody": {
++          "content": {
++            "application/json": {
++              "schema": {
++                "$ref": "#/components/schemas/SlugRequest"
++              }
++            }
++          },
++          "required": true
++        },
++        "responses": {
++          "200": {
++            "description": "OK",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/SlugResponse"
++                }
++              }
++            }
++          },
++          "400": {
++            "description": "Bad Request",
++            "content": {
++              "application/problem+json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
++                }
++              }
++            }
++          }
++        }
++      }
+     }
+   },
+   "components": {
+@@ -223,6 +264,33 @@
+             ]
+           }
+         }
++      },
++      "SlugRequest": {
++        "required": [
++          "title"
++        ],
++        "type": "object",
++        "properties": {
++          "title": {
++            "maxLength": 80,
++            "minLength": 1,
++            "type": "string",
++            "description": "The title to turn into a slug."
++          }
++        },
++        "description": "Request body for `POST /slugs`."
++      },
++      "SlugResponse": {
++        "required": [
++          "slug"
++        ],
++        "type": "object",
++        "properties": {
++          "slug": {
++            "type": "string",
++            "description": "Lower-case letters and digits, separated by single hyphens."
++          }
++        }
+       }
+     }
+   },
+@@ -232,6 +300,9 @@
+     },
+     {
+       "name": "GreetingsEndpoint"
++    },
++    {
++      "name": "SlugsEndpoint"
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/tests/Api.IntegrationTests/Features/Slugs/SlugsEndpointTests.cs b/tests/Api.IntegrationTests/Features/Slugs/SlugsEndpointTests.cs
+new file mode 100644
+index 0000000..8ab683e
+--- /dev/null
++++ b/tests/Api.IntegrationTests/Features/Slugs/SlugsEndpointTests.cs
+@@ -0,0 +1,55 @@
++using System.Net.Http.Json;
++
++namespace Api.IntegrationTests.Features.Slugs;
++
++[Collection(nameof(ApiCollection))]
++public class SlugsEndpointTests(ApiFixture fixture)
++{
++    private Task<HttpResponseMessage> Post(object payload) =>
++        fixture.Client.PostAsJsonAsync("/slugs", payload, TestContext.Current.CancellationToken);
++
++    [Fact]
++    public async Task Post_slugs_returns_the_slug()
++    {
++        using var response = await Post(new { title = "  .NET 10 -- what's new?  " });
++        using var body = await response.ReadJsonAsync();
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal("net-10-what-s-new", body.RootElement.GetProperty("slug").GetString());
++    }
++
++    [Fact]
++    public async Task Post_slugs_rejects_a_title_with_no_letters_or_digits()
++    {
++        using var response = await Post(new { title = "?!" });
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
++    }
++
++    [Fact]
++    public async Task Post_slugs_rejects_an_empty_title()
++    {
++        using var response = await Post(new { title = "" });
++        using var body = await response.ReadJsonAsync();
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++        Assert.True(body.RootElement.TryGetProperty("errors", out _));
++    }
++
++    [Fact]
++    public async Task Post_slugs_rejects_an_overlong_title()
++    {
++        using var response = await Post(new { title = new string('x', 81) });
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++    }
++
++    [Fact]
++    public async Task Post_slugs_rejects_a_missing_title()
++    {
++        using var response = await Post(new { });
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++    }
++}
+diff --git a/tests/Api.UnitTests/Features/Slugs/SlugifierTests.cs b/tests/Api.UnitTests/Features/Slugs/SlugifierTests.cs
+new file mode 100644
+index 0000000..2d5d2bc
+--- /dev/null
++++ b/tests/Api.UnitTests/Features/Slugs/SlugifierTests.cs
+@@ -0,0 +1,17 @@
++using Api.Features.Slugs;
++
++namespace Api.UnitTests.Features.Slugs;
++
++public class SlugifierTests
++{
++    [Theory]
++    [InlineData("Hello, World!", "hello-world")]
++    [InlineData("  .NET 10 -- what's new?  ", "net-10-what-s-new")]
++    [InlineData("already-a-slug", "already-a-slug")]
++    public void Slugify_lowercases_and_hyphenates(string title, string expected) =>
++        Assert.Equal(expected, Slugifier.Slugify(title).Value);
++
++    [Fact]
++    public void Slugify_fails_when_nothing_is_left() =>
++        Assert.True(Slugifier.Slugify("?!").IsError);
++}

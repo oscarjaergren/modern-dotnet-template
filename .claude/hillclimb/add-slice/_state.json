@@ -1,0 +1,73 @@
+{
+  "metrics": [
+    {
+      "id": "mergeable",
+      "label": "Mergeable",
+      "kind": "binary"
+    },
+    {
+      "id": "build",
+      "label": "Builds",
+      "kind": "binary"
+    },
+    {
+      "id": "tests",
+      "label": "Own tests pass",
+      "kind": "binary"
+    },
+    {
+      "id": "behaves",
+      "label": "Acceptance tests pass",
+      "kind": "binary"
+    },
+    {
+      "id": "contract",
+      "label": "openapi.json current",
+      "kind": "binary"
+    },
+    {
+      "id": "tested",
+      "label": "Unit and integration tests added",
+      "kind": "binary"
+    },
+    {
+      "id": "skill_used",
+      "label": "Skill invoked",
+      "kind": "binary"
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "cost_usd",
+      "label": "Cost",
+      "unit": "$"
+    },
+    {
+      "id": "latency_s",
+      "label": "Latency",
+      "unit": "s"
+    },
+    {
+      "id": "tool_calls",
+      "label": "Tool calls"
+    },
+    {
+      "id": "turns",
+      "label": "Turns"
+    }
+  ],
+  "harness_paths": [
+    ".claude/hillclimb/add-slice/cases.jsonl",
+    ".claude/hillclimb/add-slice/cases/slugs.patch",
+    ".claude/hillclimb/add-slice/cases/scores.patch",
+    ".claude/hillclimb/slice-reviewer/cases/generated/k-bookings-clean.patch",
+    ".claude/hillclimb/slice-reviewer/cases/generated/k-notes-clean.patch",
+    ".claude/skills/add-slice/SKILL.md"
+  ],
+  "reps": 2,
+  "approve_each_round": true,
+  "goal": {
+    "target": "mergeable",
+    "direction": "higher"
+  }
+}
