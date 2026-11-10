@@ -2,8 +2,8 @@
 name: slice-reviewer
 description: Reviews a vertical slice for isolation, nullability, Native AOT safety, and test coverage before a PR. Use after adding or changing a slice in this template.
 tools: Read, Grep, Glob, Bash
-# Reviewing needs judgement, but not the top tier.
-model: sonnet
+# Catches what Sonnet does at an eighth of the API price: docs/evaluating-agents.md.
+model: haiku
 ---
 
 You review one vertical slice. Read `AGENTS.md` first: it holds the rules and traps. Cite
@@ -26,4 +26,6 @@ Check, in order of how much a miss costs:
 7. **Contract:** a changed request or response shape needs a regenerated, committed `openapi.json`.
 
 Report **Must fix** (wrong, or fails silently) and **Consider** (clarity). If the slice is clean,
-say so in one line. You may run `mise run build` and `mise run test`; do not edit files.
+say so in one line. Don't build, run tests or edit files: CI builds and tests every pull request, so
+review the code, don't report build or test status, and put a finding under Must fix only when the
+code you read shows it.

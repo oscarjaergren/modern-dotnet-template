@@ -1,0 +1,290 @@
+diff --git a/src/Api/ApiJsonSerializerContext.cs b/src/Api/ApiJsonSerializerContext.cs
+index f633230..13a2a4e 100644
+--- a/src/Api/ApiJsonSerializerContext.cs
++++ b/src/Api/ApiJsonSerializerContext.cs
+@@ -1,5 +1,6 @@
+ using System.Text.Json.Serialization;
+ using Api.Features.Greetings;
++using Api.Features.Notes;
+ using Api.Features.Ping;
+ using Microsoft.AspNetCore.Mvc;
+ 
+@@ -12,6 +13,7 @@ namespace Api;
+ [JsonSerializable(typeof(PingResponse))]
+ [JsonSerializable(typeof(GreetingRequest))]
+ [JsonSerializable(typeof(GreetingResponse))]
++[JsonSerializable(typeof(NoteResponse))]
+ [JsonSerializable(typeof(HttpValidationProblemDetails))]
+ [JsonSerializable(typeof(ProblemDetails))]
+ internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;
+diff --git a/src/Api/Features/Notes/NoteResponse.cs b/src/Api/Features/Notes/NoteResponse.cs
+new file mode 100644
+index 0000000..0c88180
+--- /dev/null
++++ b/src/Api/Features/Notes/NoteResponse.cs
+@@ -0,0 +1,6 @@
++namespace Api.Features.Notes;
++
++/// <param name="Id">The note's id.</param>
++/// <param name="Title">One-line summary.</param>
++/// <param name="Tags">Lower-case labels, sorted.</param>
++public sealed record NoteResponse(int Id, string Title, IReadOnlyList<string> Tags);
+diff --git a/src/Api/Features/Notes/NoteStore.cs b/src/Api/Features/Notes/NoteStore.cs
+new file mode 100644
+index 0000000..aa02260
+--- /dev/null
++++ b/src/Api/Features/Notes/NoteStore.cs
+@@ -0,0 +1,34 @@
++using System.Collections.Frozen;
++using System.Security.Cryptography;
++using System.Text.Json;
++using ErrorOr;
++
++namespace Api.Features.Notes;
++
++/// <summary>
++/// A fixed, in-memory set of notes: a stand-in for a real store.
++/// </summary>
++internal static class NoteStore
++{
++    private static readonly FrozenDictionary<int, (string Title, string[] Tags)> Notes =
++        new Dictionary<int, (string, string[])>
++        {
++            [1] = ("Buy milk", ["home", "Errands"]),
++            [2] = ("Renew passport", ["admin"]),
++            [3] = ("Call the bank", []),
++        }.ToFrozenDictionary();
++
++    internal static ErrorOr<NoteResponse> Find(int id)
++    {
++        if (!Notes.TryGetValue(id, out var note))
++        {
++            return Error.NotFound("Notes.NotFound", $"There is no note {id}.");
++        }
++
++        var tags = note.Tags.Select(t => t.ToLowerInvariant()).Order(StringComparer.Ordinal).ToArray();
++        return new NoteResponse(id, note.Title, tags);
++    }
++
++    internal static string ETag(NoteResponse note) =>
++        $"\"{Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(note, ApiJsonSerializerContext.Default.NoteResponse)))[..16]}\"";
++}
+diff --git a/src/Api/Features/Notes/NotesEndpoint.cs b/src/Api/Features/Notes/NotesEndpoint.cs
+new file mode 100644
+index 0000000..a54771a
+--- /dev/null
++++ b/src/Api/Features/Notes/NotesEndpoint.cs
+@@ -0,0 +1,29 @@
++using Api.Infrastructure;
++using Microsoft.AspNetCore.Http.HttpResults;
++
++namespace Api.Features.Notes;
++
++internal static class NotesEndpoint
++{
++    internal static IEndpointRouteBuilder MapNotes(this IEndpointRouteBuilder app)
++    {
++        app.MapGet("/notes/{id:int}", Handle)
++            .WithName("GetNote")
++            .WithSummary("Gets one note.")
++            .ProducesProblem(StatusCodes.Status404NotFound);
++
++        return app;
++    }
++
++    private static Results<Ok<NoteResponse>, ProblemHttpResult> Handle(int id, HttpContext httpContext)
++    {
++        var note = NoteStore.Find(id);
++        if (note.IsError)
++        {
++            return note.FirstError.ToProblem();
++        }
++
++        httpContext.Response.Headers.ETag = NoteStore.ETag(note.Value);
++        return TypedResults.Ok(note.Value);
++    }
++}
+diff --git a/src/Api/Program.cs b/src/Api/Program.cs
+index b427058..27e5cf1 100644
+--- a/src/Api/Program.cs
++++ b/src/Api/Program.cs
+@@ -1,6 +1,7 @@
+ using System.Text.Json.Serialization;
+ using Api;
+ using Api.Features.Greetings;
++using Api.Features.Notes;
+ using Api.Features.Ping;
+ using Api.Infrastructure;
+ 
+@@ -57,5 +58,6 @@
+ // One line per slice, no assembly scanning: every route is visible here.
+ app.MapPing();
+ app.MapGreetings();
++app.MapNotes();
+ 
+ await app.RunAsync();
+diff --git a/src/Api/openapi.json b/src/Api/openapi.json
+index 88a896b..e60a97c 100644
+--- a/src/Api/openapi.json
++++ b/src/Api/openapi.json
+@@ -78,6 +78,48 @@
+           }
+         }
+       }
++    },
++    "/notes/{id}": {
++      "get": {
++        "tags": [
++          "NotesEndpoint"
++        ],
++        "summary": "Gets one note.",
++        "operationId": "GetNote",
++        "parameters": [
++          {
++            "name": "id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "integer",
++              "format": "int32"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "OK",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/NoteResponse"
++                }
++              }
++            }
++          },
++          "404": {
++            "description": "Not Found",
++            "content": {
++              "application/problem+json": {
++                "schema": {
++                  "$ref": "#/components/schemas/ProblemDetails"
++                }
++              }
++            }
++          }
++        }
++      }
+     }
+   },
+   "components": {
+@@ -170,6 +212,32 @@
+           }
+         }
+       },
++      "NoteResponse": {
++        "required": [
++          "id",
++          "title",
++          "tags"
++        ],
++        "type": "object",
++        "properties": {
++          "id": {
++            "type": "integer",
++            "description": "The note's id.",
++            "format": "int32"
++          },
++          "title": {
++            "type": "string",
++            "description": "One-line summary."
++          },
++          "tags": {
++            "type": "array",
++            "items": {
++              "type": "string"
++            },
++            "description": "Lower-case labels, sorted."
++          }
++        }
++      },
+       "PingResponse": {
+         "required": [
+           "status",
+@@ -232,6 +300,9 @@
+     },
+     {
+       "name": "GreetingsEndpoint"
++    },
++    {
++      "name": "NotesEndpoint"
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/tests/Api.IntegrationTests/Features/Notes/NotesEndpointTests.cs b/tests/Api.IntegrationTests/Features/Notes/NotesEndpointTests.cs
+new file mode 100644
+index 0000000..05c615c
+--- /dev/null
++++ b/tests/Api.IntegrationTests/Features/Notes/NotesEndpointTests.cs
+@@ -0,0 +1,28 @@
++namespace Api.IntegrationTests.Features.Notes;
++
++[Collection(nameof(ApiCollection))]
++public class NotesEndpointTests(ApiFixture fixture)
++{
++    [Fact]
++    public async Task Get_note_returns_the_note()
++    {
++        using var response = await fixture.Client.GetAsync("/notes/1", TestContext.Current.CancellationToken);
++        using var body = await response.ReadJsonAsync();
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal("Buy milk", body.RootElement.GetProperty("title").GetString());
++        Assert.Equal(2, body.RootElement.GetProperty("tags").GetArrayLength());
++        Assert.NotNull(response.Headers.ETag);
++    }
++
++    [Fact]
++    public async Task Get_note_returns_problem_details_for_an_unknown_id()
++    {
++        using var response = await fixture.Client.GetAsync("/notes/99", TestContext.Current.CancellationToken);
++        using var body = await response.ReadJsonAsync();
++
++        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
++        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
++        Assert.True(body.RootElement.TryGetProperty("traceId", out _));
++    }
++}
+diff --git a/tests/Api.UnitTests/Features/Notes/NoteStoreTests.cs b/tests/Api.UnitTests/Features/Notes/NoteStoreTests.cs
+new file mode 100644
+index 0000000..a178ff0
+--- /dev/null
++++ b/tests/Api.UnitTests/Features/Notes/NoteStoreTests.cs
+@@ -0,0 +1,28 @@
++using Api.Features.Notes;
++using ErrorOr;
++
++namespace Api.UnitTests.Features.Notes;
++
++public class NoteStoreTests
++{
++    [Fact]
++    public void Tags_are_lower_case_and_sorted() =>
++        Assert.Equal(["errands", "home"], NoteStore.Find(1).Value.Tags);
++
++    [Fact]
++    public void A_note_without_tags_has_an_empty_list() =>
++        Assert.Empty(NoteStore.Find(3).Value.Tags);
++
++    [Fact]
++    public void The_etag_is_stable_for_the_same_note() =>
++        Assert.Equal(NoteStore.ETag(NoteStore.Find(1).Value), NoteStore.ETag(NoteStore.Find(1).Value));
++
++    [Fact]
++    public void An_unknown_id_is_not_found()
++    {
++        var error = Assert.Single(NoteStore.Find(99).Errors);
++
++        Assert.Equal(ErrorType.NotFound, error.Type);
++        Assert.Equal("Notes.NotFound", error.Code);
++    }
++}

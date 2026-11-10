@@ -1,0 +1,17 @@
+diff --git a/src/Api/Features/Greetings/GreetingRequest.cs b/src/Api/Features/Greetings/GreetingRequest.cs
+index 12982bd..55e26b7 100644
+--- a/src/Api/Features/Greetings/GreetingRequest.cs
++++ b/src/Api/Features/Greetings/GreetingRequest.cs
+@@ -5,11 +5,7 @@ namespace Api.Features.Greetings;
+ /// <summary>
+ /// Request body for <c>POST /greetings</c>.
+ /// </summary>
+-/// <remarks>
+-/// Must be <c>public</c>: the validation source generator skips internal types, and invalid input
+-/// then returns 200 instead of 400 with no warning anywhere.
+-/// </remarks>
+-public sealed record GreetingRequest
++internal sealed record GreetingRequest
+ {
+     /// <summary>Who to greet.</summary>
+     [Required]
