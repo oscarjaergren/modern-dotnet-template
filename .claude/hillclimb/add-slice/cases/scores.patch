@@ -1,0 +1,312 @@
+diff --git a/src/Api/ApiJsonSerializerContext.cs b/src/Api/ApiJsonSerializerContext.cs
+index f633230..18c0546 100644
+--- a/src/Api/ApiJsonSerializerContext.cs
++++ b/src/Api/ApiJsonSerializerContext.cs
+@@ -1,6 +1,7 @@
+ using System.Text.Json.Serialization;
+ using Api.Features.Greetings;
+ using Api.Features.Ping;
++using Api.Features.Scores;
+ using Microsoft.AspNetCore.Mvc;
+ 
+ namespace Api;
+@@ -12,6 +13,8 @@ namespace Api;
+ [JsonSerializable(typeof(PingResponse))]
+ [JsonSerializable(typeof(GreetingRequest))]
+ [JsonSerializable(typeof(GreetingResponse))]
++[JsonSerializable(typeof(ScoresRequest))]
++[JsonSerializable(typeof(ScoresResponse))]
+ [JsonSerializable(typeof(HttpValidationProblemDetails))]
+ [JsonSerializable(typeof(ProblemDetails))]
+ internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;
+diff --git a/src/Api/Features/Scores/ScoreStats.cs b/src/Api/Features/Scores/ScoreStats.cs
+new file mode 100644
+index 0000000..0538827
+--- /dev/null
++++ b/src/Api/Features/Scores/ScoreStats.cs
+@@ -0,0 +1,12 @@
++using ErrorOr;
++
++namespace Api.Features.Scores;
++
++internal static class ScoreStats
++{
++    // Checked here, not with [Length]: on a collection it needs reflection, which Native AOT forbids.
++    internal static ErrorOr<ScoresResponse> Summarise(IReadOnlyList<int> values) =>
++        values.Count is < 1 or > 50
++            ? Error.Validation("Scores.Count", "Give between 1 and 50 scores.")
++            : new ScoresResponse(values.Count, Math.Round(values.Average(), 1), values.Max());
++}
+diff --git a/src/Api/Features/Scores/ScoresEndpoint.cs b/src/Api/Features/Scores/ScoresEndpoint.cs
+new file mode 100644
+index 0000000..cb026e4
+--- /dev/null
++++ b/src/Api/Features/Scores/ScoresEndpoint.cs
+@@ -0,0 +1,29 @@
++using Api.Infrastructure;
++using Microsoft.AspNetCore.Http.HttpResults;
++
++namespace Api.Features.Scores;
++
++internal static class ScoresEndpoint
++{
++    internal static IEndpointRouteBuilder MapScores(this IEndpointRouteBuilder app)
++    {
++        app.MapPost("/scores", Handle)
++            .WithName("SummariseScores")
++            .WithSummary("Summarises a list of scores.")
++            // Not ProducesProblem(400): it would replace the validation schema.
++            .ProducesValidationProblem();
++
++        return app;
++    }
++
++    private static Results<Ok<ScoresResponse>, ValidationProblem, ProblemHttpResult> Handle(ScoresRequest request)
++    {
++        var summary = ScoreStats.Summarise(request.Values);
++        if (summary.IsError)
++        {
++            return summary.FirstError.ToProblem();
++        }
++
++        return TypedResults.Ok(summary.Value);
++    }
++}
+diff --git a/src/Api/Features/Scores/ScoresRequest.cs b/src/Api/Features/Scores/ScoresRequest.cs
+new file mode 100644
+index 0000000..bb31132
+--- /dev/null
++++ b/src/Api/Features/Scores/ScoresRequest.cs
+@@ -0,0 +1,13 @@
++using System.ComponentModel.DataAnnotations;
++
++namespace Api.Features.Scores;
++
++/// <summary>
++/// Request body for <c>POST /scores</c>.
++/// </summary>
++public sealed record ScoresRequest
++{
++    /// <summary>The scores to summarise.</summary>
++    [Required]
++    public required IReadOnlyList<int> Values { get; init; }
++}
+diff --git a/src/Api/Features/Scores/ScoresResponse.cs b/src/Api/Features/Scores/ScoresResponse.cs
+new file mode 100644
+index 0000000..752495d
+--- /dev/null
++++ b/src/Api/Features/Scores/ScoresResponse.cs
+@@ -0,0 +1,6 @@
++namespace Api.Features.Scores;
++
++/// <param name="Count">How many scores were given.</param>
++/// <param name="Mean">Their average, to one decimal place.</param>
++/// <param name="Max">The highest score.</param>
++public sealed record ScoresResponse(int Count, double Mean, int Max);
+diff --git a/src/Api/Program.cs b/src/Api/Program.cs
+index b427058..945d243 100644
+--- a/src/Api/Program.cs
++++ b/src/Api/Program.cs
+@@ -2,6 +2,7 @@
+ using Api;
+ using Api.Features.Greetings;
+ using Api.Features.Ping;
++using Api.Features.Scores;
+ using Api.Infrastructure;
+ 
+ // The slim host omits reflection-heavy defaults that Native AOT cannot trim.
+@@ -57,5 +58,6 @@
+ // One line per slice, no assembly scanning: every route is visible here.
+ app.MapPing();
+ app.MapGreetings();
++app.MapScores();
+ 
+ await app.RunAsync();
+diff --git a/src/Api/openapi.json b/src/Api/openapi.json
+index 88a896b..eb04da6 100644
+--- a/src/Api/openapi.json
++++ b/src/Api/openapi.json
+@@ -78,6 +78,47 @@
+           }
+         }
+       }
++    },
++    "/scores": {
++      "post": {
++        "tags": [
++          "ScoresEndpoint"
++        ],
++        "summary": "Summarises a list of scores.",
++        "operationId": "SummariseScores",
++        "requestBody": {
++          "content": {
++            "application/json": {
++              "schema": {
++                "$ref": "#/components/schemas/ScoresRequest"
++              }
++            }
++          },
++          "required": true
++        },
++        "responses": {
++          "200": {
++            "description": "OK",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/ScoresResponse"
++                }
++              }
++            }
++          },
++          "400": {
++            "description": "Bad Request",
++            "content": {
++              "application/problem+json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
++                }
++              }
++            }
++          }
++        }
++      }
+     }
+   },
+   "components": {
+@@ -223,6 +264,48 @@
+             ]
+           }
+         }
++      },
++      "ScoresRequest": {
++        "required": [
++          "values"
++        ],
++        "type": "object",
++        "properties": {
++          "values": {
++            "type": "array",
++            "items": {
++              "type": "integer",
++              "format": "int32"
++            },
++            "description": "The scores to summarise."
++          }
++        },
++        "description": "Request body for `POST /scores`."
++      },
++      "ScoresResponse": {
++        "required": [
++          "count",
++          "mean",
++          "max"
++        ],
++        "type": "object",
++        "properties": {
++          "count": {
++            "type": "integer",
++            "description": "How many scores were given.",
++            "format": "int32"
++          },
++          "mean": {
++            "type": "number",
++            "description": "Their average, to one decimal place.",
++            "format": "double"
++          },
++          "max": {
++            "type": "integer",
++            "description": "The highest score.",
++            "format": "int32"
++          }
++        }
+       }
+     }
+   },
+@@ -232,6 +315,9 @@
+     },
+     {
+       "name": "GreetingsEndpoint"
++    },
++    {
++      "name": "ScoresEndpoint"
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/tests/Api.IntegrationTests/Features/Scores/ScoresEndpointTests.cs b/tests/Api.IntegrationTests/Features/Scores/ScoresEndpointTests.cs
+new file mode 100644
+index 0000000..a9adadc
+--- /dev/null
++++ b/tests/Api.IntegrationTests/Features/Scores/ScoresEndpointTests.cs
+@@ -0,0 +1,48 @@
++using System.Net.Http.Json;
++
++namespace Api.IntegrationTests.Features.Scores;
++
++[Collection(nameof(ApiCollection))]
++public class ScoresEndpointTests(ApiFixture fixture)
++{
++    private static readonly int[] Scores = [4, 5, 10];
++
++    private Task<HttpResponseMessage> Post(object payload) =>
++        fixture.Client.PostAsJsonAsync("/scores", payload, TestContext.Current.CancellationToken);
++
++    [Fact]
++    public async Task Post_scores_returns_the_summary()
++    {
++        using var response = await Post(new { values = Scores });
++        using var body = await response.ReadJsonAsync();
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal(3, body.RootElement.GetProperty("count").GetInt32());
++        Assert.Equal(6.3, body.RootElement.GetProperty("mean").GetDouble());
++        Assert.Equal(10, body.RootElement.GetProperty("max").GetInt32());
++    }
++
++    [Fact]
++    public async Task Post_scores_rejects_an_empty_list()
++    {
++        using var response = await Post(new { values = Array.Empty<int>() });
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++    }
++
++    [Fact]
++    public async Task Post_scores_rejects_more_than_fifty()
++    {
++        using var response = await Post(new { values = Enumerable.Repeat(1, 51) });
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++    }
++
++    [Fact]
++    public async Task Post_scores_rejects_a_missing_list()
++    {
++        using var response = await Post(new { });
++
++        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
++    }
++}
+diff --git a/tests/Api.UnitTests/Features/Scores/ScoreStatsTests.cs b/tests/Api.UnitTests/Features/Scores/ScoreStatsTests.cs
+new file mode 100644
+index 0000000..762dc88
+--- /dev/null
++++ b/tests/Api.UnitTests/Features/Scores/ScoreStatsTests.cs
+@@ -0,0 +1,16 @@
++using Api.Features.Scores;
++
++namespace Api.UnitTests.Features.Scores;
++
++public class ScoreStatsTests
++{
++    [Fact]
++    public void Summarise_counts_averages_and_finds_the_max() =>
++        Assert.Equal(new ScoresResponse(3, 6.3, 10), ScoreStats.Summarise([4, 5, 10]).Value);
++
++    [Theory]
++    [InlineData(0)]
++    [InlineData(51)]
++    public void Summarise_fails_outside_one_to_fifty_scores(int count) =>
++        Assert.True(ScoreStats.Summarise([.. Enumerable.Repeat(1, count)]).IsError);
++}
